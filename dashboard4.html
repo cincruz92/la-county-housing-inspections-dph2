@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LA County Housing Inspections and Violations - Demographic Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@300;400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; outline: none !important; }
+  :root {
+    --navy: #2E4A7A; --navy-light: #EEF2F8; --orange: #E8873A;
+    --accent: #2E4A7A;
+    --accent-light: #EEF2F8;
+    --white: #FFFFFF; --gray-50: #F7F8FA; --gray-100: #F0F2F6; --gray-200: #EAECF0; --gray-300: #D8DCE3;
+    --gray-400: #9DA3AE; --gray-600: #6B7280; --gray-700: #374151; --gray-900: #111827;
+    --font-display: "Source Serif 4", serif; --font-body: "IBM Plex Sans", sans-serif;
+    --radius: 12px; --shadow: 0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.05);
+  }
+  html, body { font-family: var(--font-body); font-size: 15px; background: var(--gray-100); color: var(--gray-900); min-height: 100vh; }
+
+  /* HEADER */
+  .db-header { background: transparent; max-width: 1200px; margin: 0 auto; padding: 32px 40px 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .db-label { font-size: 11px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: #9DA3AE; margin-bottom: 6px; }
+  .db-title { font-family: var(--font-display); font-size: 26px; font-weight: 600; color: var(--navy); line-height: 1.25; }
+  .db-badge { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22); color: rgba(255,255,255,0.8); font-size: 12px; padding: 5px 14px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; pointer-events: none; user-select: none; }
+
+  /* LAYOUT */
+  .db-body { max-width: 1200px; margin: 0 auto; padding: 30px 40px 20px; }
+  .db-footer { max-width: 1200px; margin: 0 auto; padding: 16px 40px 40px; display: flex; justify-content: space-between; align-items: center; }
+  .footer-source { font-size: 11px; color: var(--gray-400); }
+  .footer-note { font-size: 11px; color: var(--gray-400); font-style: italic; }
+
+  /* CALLOUT */
+  .callout { border-left: 4px solid var(--navy); padding: 16px 22px; margin-bottom: 20px; background: var(--navy-light); border-radius: 0 var(--radius) var(--radius) 0; }
+  .callout-headline { font-family: var(--font-display); font-size: 17px; font-weight: 600; color: var(--navy); margin-bottom: 8px; }
+  .callout-text { font-size: 14px; color: var(--gray-900); line-height: 1.7; }
+  .callout-text strong { color: var(--navy); font-weight: 500; }
+
+  /* VISUAL EXPLAINER */
+  .explainer { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .explainer-card { background: var(--white); border-radius: 4px; border: 0.5px solid var(--gray-300); padding: 18px 20px; }
+  .explainer-card.found { border-color: var(--navy); border-width: 2px; }
+  .explainer-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+  .explainer-label.hypothetical { color: var(--gray-400); }
+  .explainer-label.found { color: var(--gray-600); }
+  .explainer-title { font-size: 13px; font-weight: 500; color: var(--gray-700); margin-bottom: 12px; line-height: 1.4; }
+  .explainer-chart { position: relative; height: 100px; }
+  .explainer-chart canvas { width: 100% !important; }
+  .explainer-desc { font-size: 11px; color: var(--gray-400); margin-top: 10px; line-height: 1.5; }
+  .explainer-desc strong { color: var(--gray-700); }
+
+  /* FINDING CARDS */
+  .finding-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
+  .finding-card { background: var(--white); border-radius: 4px; border: 0.5px solid var(--gray-300); padding: 16px 18px; text-align: center; }
+  .finding-r2 { font-family: var(--font-display); font-size: 28px; font-weight: 600; color: var(--navy); margin-bottom: 4px; }
+  .finding-label { font-size: 12px; font-weight: 500; color: var(--gray-700); margin-bottom: 6px; }
+  .finding-desc { font-size: 11px; color: var(--gray-400); line-height: 1.5; }
+
+  /* SUMMARY TABLE */
+  .summary-card { background: var(--white); border-radius: 4px; border: 0.5px solid var(--gray-300); padding: 24px 28px; margin-bottom: 20px; }
+  .summary-title { font-family: var(--font-display); font-size: 18px; font-weight: 600; color: var(--navy); margin-bottom: 6px; }
+  .summary-sub { font-size: 13px; color: var(--gray-400); margin-bottom: 18px; }
+  .summary-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .summary-table th { font-size: 11px; font-weight: 600; color: var(--gray-400); text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 12px; border-bottom: 1.5px solid var(--gray-200); text-align: left; }
+  .summary-table th:last-child { text-align: right; }
+  .summary-table td { padding: 12px; border-bottom: 0.5px solid var(--gray-200); color: var(--gray-700); vertical-align: middle; }
+  .summary-table tr:last-child td { border-bottom: none; }
+  .summary-table td:first-child { font-weight: 500; color: var(--gray-900); }
+  .r2-cell { font-family: var(--font-display); font-size: 15px; font-weight: 600; color: var(--navy); text-align: right; }
+  .interp-bar { height: 6px; background: var(--gray-200); border-radius: 3px; overflow: hidden; margin-top: 4px; }
+  .interp-fill { height: 100%; background: var(--navy); border-radius: 3px; }
+  .interp-text { font-size: 11px; color: var(--gray-400); }
+  .footnote { font-size: 12px; color: var(--gray-900); margin-top: 14px; line-height: 1.65; padding: 12px 16px; background: var(--gray-50); border-left: 3px solid var(--navy); border-radius: 0 4px 4px 0; }
+  .footnote strong { color: var(--navy); font-weight: 600; }
+
+  /* ZIP SEARCH */
+  .zip-search-wrap { background: #1E3560; border-radius: var(--radius); padding: 24px 28px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(46,74,122,0.25); }
+  .zip-search-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--orange); margin-bottom: 8px; }
+  .zip-search-headline { font-family: var(--font-display); font-size: 18px; font-weight: 400; color: var(--white); margin-bottom: 4px; }
+  .zip-search-hint { font-size: 12px; color: rgba(255,255,255,0.6); margin-bottom: 16px; }
+  .zip-input-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .zip-input { padding: 12px 16px; border: 2px solid var(--orange, #E8873A); border-radius: 8px; font-size: 16px; font-family: var(--font-body); color: var(--gray-900); background: var(--white); width: 180px; transition: border-color 0.15s, box-shadow 0.15s; }
+  .zip-input:focus { outline: none; box-shadow: 0 0 0 3px rgba(232,135,58,0.25); }
+  .zip-input:focus { border-color: var(--accent, #2E4A7A); }
+  .zip-input::placeholder { color: var(--gray-400); }
+  .zip-btn { padding: 12px 24px; background: var(--orange, #E8873A); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; font-family: var(--font-body); cursor: pointer; transition: background 0.15s; white-space: nowrap; }
+  .zip-btn:hover { background: #D17B30; }
+  .zip-btn:hover { opacity: 0.88; }
+  .zip-clear { padding: 12px 16px; background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; font-size: 13px; font-family: var(--font-body); cursor: pointer; }
+  .zip-result-wrap { margin-top: 16px; }
+  .zip-result-card { background: rgba(255,255,255,0.12); border-radius: 8px; padding: 14px 18px; display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+  .zip-result-zip { font-family: var(--font-display); font-size: 22px; font-weight: 600; color: var(--white); flex-shrink: 0; border-right: 1px solid rgba(255,255,255,0.2); padding-right: 20px; }
+  .zip-result-stats { display: flex; gap: 24px; flex-wrap: wrap; }
+  .zip-stat { text-align: center; }
+  .zip-stat-val { font-family: var(--font-display); font-size: 20px; font-weight: 600; color: var(--white); }
+  .zip-stat-val.severe { color: #A32D2D; }
+  .zip-stat-label { font-size: 10px; color: rgba(255,255,255,0.6); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .zip-stat-period { font-size: 9px; color: rgba(255,255,255,0.4); margin-top: 1px; font-style: italic; }
+  .zip-not-found { font-size: 13px; color: rgba(255,255,255,0.7); font-style: italic; margin-top: 12px; }
+
+  /* CHART CARD */
+  .chart-card { background: var(--white); border-radius: var(--radius); border: 1px solid var(--gray-200); padding: 26px 28px; box-shadow: var(--shadow); margin-bottom: 20px; }
+  .chart-title { font-family: var(--font-display); font-size: 22px; font-weight: 600; color: var(--navy); margin-bottom: 6px; }
+  .chart-sub { font-size: 13px; color: var(--gray-400); margin-bottom: 16px; }
+  .tab-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+  .tab { padding: 7px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; cursor: pointer; border: 1px solid var(--gray-200); background: var(--gray-50); color: var(--gray-600); transition: all 0.15s; user-select: none; }
+  .tab:hover { border-color: var(--navy); color: var(--navy); }
+  .tab.active { background: var(--navy); color: var(--white); border-color: var(--navy); }
+  .r2-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 12px; }
+  .color-legend { display: flex; gap: 16px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--gray-600); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .r2-badge { background: var(--navy-light); border-radius: 8px; padding: 10px 16px; display: flex; align-items: center; gap: 14px; }
+  .r2-value { font-family: var(--font-display); font-size: 22px; font-weight: 600; color: var(--navy); }
+  .r2-interp { font-size: 12px; color: var(--gray-600); font-style: italic; }
+  .chart-wrap { position: relative; width: 100%; height: 340px; }
+  .axis-note { font-size: 11px; color: var(--gray-400); font-style: italic; margin-top: 8px; text-align: center; line-height: 1.6; }
+
+  /* style match: lookup-tool research-card treatment (hairline, no shadow) */
+  .chart-card{box-shadow:0 1px 3px rgba(16,24,40,0.08), 0 1px 2px rgba(16,24,40,0.06);border:1px solid #D0D5DD;border-radius:4px;}
+
+
+  /* WHAT THIS SUGGESTS (Layout D) */
+  .impl-card { background: var(--navy-light); border: 1px solid #D0D5DD; border-left: 4px solid var(--navy); border-radius: 4px; box-shadow: 0 1px 3px rgba(16,24,40,0.08), 0 1px 2px rgba(16,24,40,0.06); padding: 32px 36px; margin-bottom: 20px; width: 100%; }
+  .impl-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gray-600); margin-bottom: 16px; }
+  .impl-lede { font-size: 16px; font-weight: 600; color: var(--navy); line-height: 1.55; margin-bottom: 18px; }
+  .impl-p { font-size: 13.5px; color: var(--gray-900); line-height: 1.7; margin-bottom: 18px; }
+  .impl-p strong { color: var(--navy); font-weight: 600; }
+  .impl-zone { background: var(--white); border-radius: 8px; padding: 18px 20px; margin: 20px 0; }
+  .impl-zone-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gray-600); margin-bottom: 12px; }
+  .impl-law-row { display: grid; grid-template-columns: 130px 1fr; gap: 14px; font-size: 13px; line-height: 1.6; color: var(--gray-900); padding: 10px 0; border-bottom: 0.5px solid var(--gray-200); }
+  .impl-law-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .impl-law-row:first-child { padding-top: 0; }
+  .impl-law-date { font-weight: 500; color: var(--gray-600); font-size: 11px; }
+  .impl-law-text strong { font-weight: 500; color: var(--gray-900); }
+  .impl-law-text a { color: var(--navy); text-decoration: underline; text-decoration-color: rgba(46,74,122,0.3); text-underline-offset: 2px; transition: text-decoration-color 0.15s ease; }
+  .impl-law-text a:hover { text-decoration-color: var(--navy); }
+  .impl-synth { font-family: var(--font-display); font-size: 17px; font-weight: 600; color: var(--navy); line-height: 1.5; padding: 16px 18px; background: rgba(255,255,255,0.55); border-radius: 8px; margin: 4px 0 18px; }
+  .impl-note { font-size: 12.5px; color: var(--gray-600); line-height: 1.65; margin-bottom: 12px; }
+  .impl-note:last-of-type { margin-bottom: 0; }
+  .impl-q-zone { background: #1E5A96; border-radius: 10px; padding: 20px 22px; margin: 22px 0 16px; }
+  .impl-q-zone-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(255,255,255,0.6); margin-bottom: 12px; }
+  .impl-q-item { font-size: 15px; font-weight: 500; color: var(--white); line-height: 1.5; margin-bottom: 10px; }
+  .impl-q-item:last-child { margin-bottom: 0; }
+  .impl-audience { display: flex; align-items: flex-start; gap: 10px; background: var(--white); border-radius: 8px; padding: 14px 16px; font-size: 12px; color: var(--gray-700); line-height: 1.6; }
+  .impl-audience-icon { width: 22px; height: 22px; border-radius: 50%; background: var(--navy-light); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--navy); font-weight: 600; }
+  .impl-audience-body { display: flex; flex-direction: column; gap: 4px; }
+  .impl-audience-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gray-400); }
+
+  /* ===== Mobile (added June 2026): no effect above 700px ===== */
+  @media (max-width: 700px) {
+    .db-header { padding: 24px 16px 0; }
+    .db-title { font-size: 21px; }
+    .db-body { padding: 22px 16px 16px; }
+    .explainer { grid-template-columns: 1fr; gap: 10px; }
+    .finding-cards { grid-template-columns: 1fr; gap: 10px; }
+    .impl-law-row { grid-template-columns: 1fr; }
+    table { display: block; overflow-x: auto; }
+    .db-footer { flex-direction: column; align-items: flex-start; gap: 6px; padding: 14px 16px 28px; }
+  }
+</style>
+</head>
+<body>
+<!-- PORTFOLIO NAVIGATION -->
+<div style="background:#1E3560;padding:12px 40px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+  <a href="index.html" style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);text-decoration:none;white-space:nowrap;letter-spacing:0.06em;text-transform:uppercase;display:flex;align-items:center;gap:6px;">&#8592; Portfolio Home</a>
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <a href="dashboard0.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Start Here</a>
+    <a href="dashboard1.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">The Decline</a>
+    <a href="dashboard2.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Violations by Area</a>
+    <a href="dashboard3.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Property Types</a>
+    <a href="dashboard6.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Look Up a Property</a>
+    <a href="dashboard4.html" style="font-size:12px;font-weight:600;color:#ffffff;background:rgba(255,255,255,0.22);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.5);">Equity</a>
+    <a href="methods.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Methods</a>
+    <a href="dashboard5.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Limitations</a>
+  </div>
+</div>
+
+
+<div class="db-header">
+  <div>
+    <p class="db-label">Equity</p>
+    <h1 class="db-title">The Inspection Decline Was Systemic, Not Demographic</h1>
+  </div>
+  
+</div>
+
+<div class="db-body">
+
+  <div class="callout">
+    <p class="callout-headline">Higher-income and lower-income neighborhoods lost inspections at the same rate.</p>
+    <p class="callout-text">This analysis asked whether the 82% inspection decline fell harder based on how much households earn by ZIP code, the share of renters stretched by housing costs, or racial and ethnic composition. <strong>It did not.</strong> Across 254 ZIP codes, there is no meaningful relationship between these characteristics and how sharply inspections declined. Higher-income and lower-income ZIP codes, as well as Latino, Black non-Hispanic, Asian non-Hispanic, and White non-Hispanic communities, all lost inspections at roughly equal rates. This points to a <strong>systemic and uniform decline</strong> rather than a decline concentrated by income, the share of renters stretched by housing costs, or the Hispanic, White, Black, or Asian share of a ZIP code. The statistical measure used to test this is R², which is explained below.</p>
+  </div>
+
+  <div class="explainer">
+    <div class="explainer-card">
+      <p class="explainer-label hypothetical">If a disparity existed: what we would expect to see</p>
+      <p class="explainer-title">Lower-income neighborhoods would show steeper declines. Dots would slope downward left to right.</p>
+      <div class="explainer-chart">
+        <canvas id="hypotheticalChart" role="img" aria-label="Hypothetical scatter plot showing dots sloping downward indicating lower-income neighborhoods would have steeper inspection declines if disparities existed"></canvas>
+      </div>
+      <p class="explainer-desc"><strong>R² well above zero</strong> would mean the decline tracked with income, the share of renters stretched by housing costs, or the Hispanic, White, Black, or Asian share of a ZIP code.</p>
+    </div>
+    <div class="explainer-card found">
+      <p class="explainer-label found">✓ What we actually found</p>
+      <p class="explainer-title">No pattern. Dots are scattered randomly regardless of income, housing costs, or racial and ethnic composition.</p>
+      <div class="explainer-chart">
+        <canvas id="actualChart" role="img" aria-label="Actual scatter plot showing dots scattered randomly with no slope, confirming no relationship between demographics and inspection decline"></canvas>
+      </div>
+      <p class="explainer-desc"><strong>R² near 0.0</strong> means demographics do not explain inspection decline. The decline was equally distributed.</p>
+    </div>
+  </div>
+
+  <div class="finding-cards">
+    <div class="finding-card">
+      <div class="finding-r2">R² = 0.016</div>
+      <div class="finding-label">Income vs. Inspection Decline</div>
+      <div class="finding-desc">Median household income explains less than 2% of the variation in inspection decline across ZIP codes.</div>
+    </div>
+    <div class="finding-card">
+      <div class="finding-r2">R² = 0.004</div>
+      <div class="finding-label">Renters Stretched by Housing Costs vs. Inspection Decline</div>
+      <div class="finding-desc">Renters stretched by housing costs explains less than 1% of the variation in inspection decline across ZIP codes.</div>
+    </div>
+    <div class="finding-card">
+      <div class="finding-r2">R² ≤ 0.020</div>
+      <div class="finding-label">Race / Ethnicity vs. Inspection Decline</div>
+      <div class="finding-desc">No racial or ethnic group shows a meaningful relationship with how much inspections declined across ZIP codes.</div>
+    </div>
+  </div>
+
+  <div class="summary-card">
+    <h2 class="summary-title">All Six Variables Tested. None Explained the Decline.</h2>
+    <p class="summary-sub">R² measures how much of the variation in inspection decline is explained by each variable. Values near zero indicate no meaningful relationship.</p>
+    <table class="summary-table">
+      <thead>
+        <tr>
+          <th>Variable tested</th>
+          <th>Category</th>
+          <th>R² value</th>
+          <th style="text-align:right;">Variation explained</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Median Household Income</td>
+          <td><span class="interp-text">Economic</span></td>
+          <td class="r2-cell">0.016</td>
+          <td><div class="interp-bar"><div class="interp-fill" style="width:1.1%"></div></div><span class="interp-text">1.6%. No meaningful relationship.</span></td>
+        </tr>
+        <tr>
+          <td>Renters Stretched by Housing Costs</td>
+          <td><span class="interp-text">Economic</span></td>
+          <td class="r2-cell">0.004</td>
+          <td><div class="interp-bar"><div class="interp-fill" style="width:0.8%"></div></div><span class="interp-text">0.4%. No meaningful relationship.</span></td>
+        </tr>
+        <tr>
+          <td>Hispanic / Latino Population (%)</td>
+          <td><span class="interp-text">Race / Ethnicity</span></td>
+          <td class="r2-cell">0.015</td>
+          <td><div class="interp-bar"><div class="interp-fill" style="width:0.6%"></div></div><span class="interp-text">1.5%. No meaningful relationship.</span></td>
+        </tr>
+        <tr>
+          <td>White Non-Hispanic Population (%)</td>
+          <td><span class="interp-text">Race / Ethnicity</span></td>
+          <td class="r2-cell">0.020</td>
+          <td><div class="interp-bar"><div class="interp-fill" style="width:2.3%"></div></div><span class="interp-text">2.0%. No meaningful relationship.</span></td>
+        </tr>
+        <tr>
+          <td>Black Non-Hispanic Population (%)</td>
+          <td><span class="interp-text">Race / Ethnicity</span></td>
+          <td class="r2-cell">0.020</td>
+          <td><div class="interp-bar"><div class="interp-fill" style="width:2.9%"></div></div><span class="interp-text">2.0%. No meaningful relationship.</span></td>
+        </tr>
+        <tr>
+          <td>Asian Non-Hispanic Population (%)</td>
+          <td><span class="interp-text">Race / Ethnicity</span></td>
+          <td class="r2-cell">0.005</td>
+          <td><div class="interp-bar"><div class="interp-fill" style="width:0.1%"></div></div><span class="interp-text">0.5%. No relationship detected.</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="footnote">This analysis used R² ≥ 0.10 as a conservative threshold for a meaningful relationship, meaning at least 10% of variation explained. All values here are under 0.03, confirming the inspection decline was not demographically targeted.</p>
+    <p class="footnote"><strong>Why only four racial and ethnic groups were tested:</strong> The demographic analysis focused on Hispanic or Latino, White non-Hispanic, Black non-Hispanic, and Asian non-Hispanic populations because these four groups had large enough populations at the ZIP code level to produce statistically reliable results. Other groups, including American Indian or Alaska Native, Native Hawaiian or Pacific Islander, and Two or More Races, were present in the Census data but represented very small populations within individual ZIP codes. Including them would have produced unreliable results that could misrepresent those communities.</p>
+  </div>
+
+  <div class="zip-search-wrap">
+    <p class="zip-search-eyebrow">Interactive Tool</p>
+    <p class="zip-search-headline">Where do you live? Look up your ZIP code.</p>
+    <p class="zip-search-hint">See how much housing inspections changed in your neighborhood compared to the rest of LA County.</p>
+    <div class="zip-input-row">
+      <input type="text" class="zip-input" id="zipInput" placeholder="Enter ZIP code" maxlength="5">
+      <button class="zip-btn" onclick="searchZip()">Search My ZIP Code</button>
+      <button class="zip-clear" id="zipClear" onclick="clearZip()" style="display:none;">Clear</button>
+    </div>
+    <div id="zipResult"></div>
+  </div>
+
+  <div class="chart-card">
+    <h2 class="chart-title">Demographic Analysis: Inspection Change by Demographic Variable</h2>
+    <p class="chart-sub">Each dot represents one ZIP code. 254 ZIP codes with valid demographic data and inspections in the January-September 2023 baseline window. Select a variable using the tabs below, then hover over any dot for details.</p>
+    <div class="tab-row">
+      <div class="tab active" onclick="switchTab(this, 'income')">Median Household Income</div>
+      <div class="tab" onclick="switchTab(this, 'rent_burden')">Renters Stretched by Housing Costs</div>
+    </div>
+    <div class="r2-row">
+      <div class="color-legend" id="colorLegend"></div>
+      <div class="r2-badge">
+        <div>
+          <div class="r2-value" id="r2Value">R² = 0.016</div>
+          <div style="font-size:11px;color:var(--gray-400);">Explanatory power</div>
+        </div>
+        <div class="r2-interp" id="r2Interp">Less than 2% of variation explained</div>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="scatterChart"></canvas>
+    </div>
+    <p class="axis-note">
+      Trend line shown for reference. A flat or near-flat slope confirms no meaningful relationship between demographics and inspection change.<br>
+      Negative values indicate fewer inspections than 2023. Positive values indicate more inspections than 2023.<br>
+      A small number of ZIP codes exceed 100% because they had very few inspections in 2023 compared to later years. Three ZIP codes exceed this chart's 175% range and are not plotted: 91381 (500%), 91020 (212.5%), and 91214 (192.3%). All three are included in the R&sup2; calculation above.
+    </p>
+  </div>
+
+
+  <!-- WHAT THIS SUGGESTS -->
+  <div class="impl-card">
+    <div class="impl-label">What This Suggests</div>
+    <p class="impl-lede">The expected story is that when public services decline, disadvantaged communities lose the most. Across 254 ZIP codes, this data refuses to tell that story: how much households earn by ZIP code barely matters, how many renters are stretched thin by housing costs barely matters, and whether a ZIP code is majority Hispanic, White, Black, or Asian barely matters. None comes close to explaining where inspections were lost.</p>
+    <div class="impl-zone">
+      <div class="impl-zone-label">How the test was run</div>
+      <div class="impl-law-row">
+        <div class="impl-law-date">The test</div>
+        <div class="impl-law-text">Each ZIP code's inspection decline, over the same nine months of 2023 and 2025, was tested against six variables from the American Community Survey: median household income, renters stretched by housing costs, and percent White, Black, Hispanic, and Asian residents.</div>
+      </div>
+      <div class="impl-law-row">
+        <div class="impl-law-date">The result</div>
+        <div class="impl-law-text">R-squared values from 0.004 to 0.020. On a scale where 1.0 means a variable fully explains the pattern and 0 means no relationship at all, every variable lands within 2% of zero.</div>
+      </div>
+      <div class="impl-law-row">
+        <div class="impl-law-date">What that rules out</div>
+        <div class="impl-law-text">A targeted decline. If inspections had been withdrawn from poor neighborhoods, or from neighborhoods of color, these six numbers could not all sit near zero.</div>
+      </div>
+    </div>
+    <p class="impl-p">Since none of the six variables explain the decline, the only explanation left is systemwide: the decline hit everywhere at roughly comparable rates, regardless of who lives there. That changes what kind of fix makes sense. A targeted decline would call for targeted reforms, like closer oversight of where inspectors are sent and why. A uniform collapse calls for something different: more budget, more staff, and a rule requiring that inspections actually happen. The Board has already written that rule once. RHHP, in effect since October 2024, gives unincorporated areas a mandated four-year inspection cycle. The 85 contracted cities, which account for more than 99% of the inspections in this dataset, have no equivalent.</p>
+    <p class="impl-note">An equal decline is not the same as equal harm. These six variables rule out a ZIP-level demographic pattern in where inspections were lost, not in what the loss costs. Conditions were not uniform when inspectors did go: among the 176 ZIP codes with 50 or more inspections, violation rates ranged from 0% to 77%, with a median of 38%. The same missed inspection means more in a building that was already failing.</p>
+    <div class="impl-q-zone">
+      <div class="impl-q-zone-label">The questions this raises</div>
+      <div class="impl-q-item">If no community was spared, restoring inspections is not a targeting problem. It is a funding and staffing problem for the whole county. Who pays to fix that?</div>
+      <div class="impl-q-item">Unincorporated LA County now has a guaranteed four-year inspection cycle. What is the equivalent guarantee for the City of Los Angeles and the other 84 contracted cities?</div>
+    </div>
+    <div class="impl-audience">
+      <div class="impl-audience-icon">i</div>
+      <div class="impl-audience-body">
+        <div class="impl-audience-label">Who should read this</div>
+        <div>The LA County Board of Supervisors, which controls both the Environmental Health budget and the contracts that could carry a mandate.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="db-footer">
+  <p class="footer-source">Source: LA County Open Data Portal · Census Reporter ACS 5-Year Estimates (2020-2024) · Data accessed February 2026</p>
+  <p class="footer-note">Analysis covers 254 of 289 ZIP codes · 35 excluded: 30 for missing or invalid Census data, 5 with no inspections in the January-September 2023 baseline window · Long Beach is absent from the source data · Pasadena, Vernon, and South Pasadena appear as published</p>
+  <p class="footer-note">A few dots sit above zero: twelve ZIP codes show inspection increases rather than declines, and four (91020, 91040, 91214, 91381) exceed +100% because their January–September 2023 baselines were very small, so a handful of added inspections reads as a large percentage change. All are retained in the regression as published.</p>
+</div>
+<div style="max-width:1200px;margin:0 auto;padding:0 40px 36px;">
+  <div style="border-top:0.5px solid #D8DCE3;padding-top:14px;display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px;">
+    <p style="font-size:12px;color:#6B7280;margin:0;"><strong style="color:#374151;font-weight:600;">Cindy Cruz</strong> &middot; 2026</p>
+    <p style="font-size:12px;margin:0;"><a href="https://www.linkedin.com/in/cindy-c-85b312114/" target="_blank" rel="noopener" style="color:#2E4A7A;text-decoration:none;border-bottom:1px solid #D8DCE3;">LinkedIn</a><span style="color:#9DA3AE;margin:0 8px;">&middot;</span><a href="https://github.com/ccruz92" target="_blank" rel="noopener" style="color:#2E4A7A;text-decoration:none;border-bottom:1px solid #D8DCE3;">GitHub</a></p>
+  </div>
+</div>
+
+
+<script>
+const NAVY = "#2E4A7A";
+const ORANGE = "#2E4A7A";
+const NAVY_MID = "#4A6FA5";
+const ALL_DATA = [{"zip": 90001, "decline": -72.7, "income": 60767, "rent_burden": 57.4, "white_pct": 1.0, "black_pct": 5.9, "asian_pct": 0.3, "hispanic_pct": 91.9}, {"zip": 90002, "decline": -91.4, "income": 59021, "rent_burden": 65.7, "white_pct": 0.4, "black_pct": 14.5, "asian_pct": 1.4, "hispanic_pct": 82.1}, {"zip": 90003, "decline": -78.7, "income": 56030, "rent_burden": 58.4, "white_pct": 0.6, "black_pct": 15.8, "asian_pct": 0.5, "hispanic_pct": 81.0}, {"zip": 90004, "decline": -90.6, "income": 64826, "rent_burden": 58.8, "white_pct": 21.3, "black_pct": 4.5, "asian_pct": 24.8, "hispanic_pct": 44.9}, {"zip": 90005, "decline": -92.3, "income": 49419, "rent_burden": 61.9, "white_pct": 10.4, "black_pct": 5.9, "asian_pct": 34.3, "hispanic_pct": 45.5}, {"zip": 90006, "decline": -89.5, "income": 51998, "rent_burden": 56.9, "white_pct": 5.3, "black_pct": 3.1, "asian_pct": 17.8, "hispanic_pct": 72.0}, {"zip": 90007, "decline": -91.0, "income": 35378, "rent_burden": 62.1, "white_pct": 16.2, "black_pct": 8.5, "asian_pct": 19.5, "hispanic_pct": 51.8}, {"zip": 90008, "decline": -100.0, "income": 61846, "rent_burden": 59.1, "white_pct": 6.3, "black_pct": 60.7, "asian_pct": 3.1, "hispanic_pct": 25.6}, {"zip": 90010, "decline": -87.5, "income": 101455, "rent_burden": 49.3, "white_pct": 16.1, "black_pct": 6.4, "asian_pct": 64.0, "hispanic_pct": 10.3}, {"zip": 90011, "decline": -89.5, "income": 59017, "rent_burden": 60.9, "white_pct": 1.1, "black_pct": 6.0, "asian_pct": 0.7, "hispanic_pct": 91.0}, {"zip": 90012, "decline": -98.6, "income": 66860, "rent_burden": 54.3, "white_pct": 17.3, "black_pct": 12.4, "asian_pct": 37.2, "hispanic_pct": 27.6}, {"zip": 90013, "decline": -85.7, "income": 36948, "rent_burden": 52.8, "white_pct": 24.4, "black_pct": 21.9, "asian_pct": 19.8, "hispanic_pct": 25.3}, {"zip": 90014, "decline": -95.5, "income": 31000, "rent_burden": 57.8, "white_pct": 24.6, "black_pct": 21.4, "asian_pct": 21.9, "hispanic_pct": 23.1}, {"zip": 90015, "decline": -92.3, "income": 69268, "rent_burden": 51.3, "white_pct": 15.5, "black_pct": 11.0, "asian_pct": 22.7, "hispanic_pct": 45.7}, {"zip": 90016, "decline": -97.4, "income": 73516, "rent_burden": 56.7, "white_pct": 12.6, "black_pct": 26.5, "asian_pct": 4.6, "hispanic_pct": 50.1}, {"zip": 90017, "decline": -93.8, "income": 52717, "rent_burden": 63.6, "white_pct": 9.4, "black_pct": 13.6, "asian_pct": 18.3, "hispanic_pct": 55.8}, {"zip": 90018, "decline": -98.0, "income": 62864, "rent_burden": 57.2, "white_pct": 7.5, "black_pct": 22.5, "asian_pct": 5.4, "hispanic_pct": 59.4}, {"zip": 90019, "decline": -97.6, "income": 73934, "rent_burden": 52.2, "white_pct": 18.2, "black_pct": 15.5, "asian_pct": 17.7, "hispanic_pct": 43.4}, {"zip": 90020, "decline": -83.3, "income": 61184, "rent_burden": 57.9, "white_pct": 12.3, "black_pct": 6.5, "asian_pct": 42.7, "hispanic_pct": 33.6}, {"zip": 90021, "decline": -82.4, "income": 32222, "rent_burden": 64.5, "white_pct": 23.5, "black_pct": 18.5, "asian_pct": 4.1, "hispanic_pct": 48.7}, {"zip": 90022, "decline": -80.0, "income": 67967, "rent_burden": 48.3, "white_pct": 1.6, "black_pct": 0.5, "asian_pct": 0.6, "hispanic_pct": 96.8}, {"zip": 90023, "decline": -99.2, "income": 59057, "rent_burden": 56.9, "white_pct": 1.8, "black_pct": 0.5, "asian_pct": 0.9, "hispanic_pct": 96.0}, {"zip": 90024, "decline": -94.8, "income": 76583, "rent_burden": 66.6, "white_pct": 47.7, "black_pct": 5.1, "asian_pct": 26.4, "hispanic_pct": 14.0}, {"zip": 90025, "decline": -90.0, "income": 103894, "rent_burden": 51.6, "white_pct": 52.5, "black_pct": 3.9, "asian_pct": 21.0, "hispanic_pct": 15.3}, {"zip": 90026, "decline": -94.4, "income": 87334, "rent_burden": 47.6, "white_pct": 31.5, "black_pct": 3.1, "asian_pct": 13.7, "hispanic_pct": 45.7}, {"zip": 90027, "decline": -97.7, "income": 94521, "rent_burden": 49.3, "white_pct": 56.8, "black_pct": 4.0, "asian_pct": 11.7, "hispanic_pct": 21.9}, {"zip": 90028, "decline": -87.3, "income": 61349, "rent_burden": 55.4, "white_pct": 40.9, "black_pct": 8.2, "asian_pct": 12.8, "hispanic_pct": 29.4}, {"zip": 90029, "decline": -97.8, "income": 60440, "rent_burden": 56.2, "white_pct": 26.3, "black_pct": 4.1, "asian_pct": 15.6, "hispanic_pct": 49.9}, {"zip": 90031, "decline": -97.9, "income": 63090, "rent_burden": 58.5, "white_pct": 9.2, "black_pct": 1.8, "asian_pct": 28.2, "hispanic_pct": 57.2}, {"zip": 90032, "decline": -96.6, "income": 82292, "rent_burden": 48.6, "white_pct": 9.8, "black_pct": 2.7, "asian_pct": 11.0, "hispanic_pct": 74.3}, {"zip": 90033, "decline": -95.1, "income": 59652, "rent_burden": 52.6, "white_pct": 3.6, "black_pct": 1.3, "asian_pct": 5.1, "hispanic_pct": 88.7}, {"zip": 90034, "decline": -94.0, "income": 105701, "rent_burden": 47.3, "white_pct": 39.0, "black_pct": 9.6, "asian_pct": 18.6, "hispanic_pct": 25.6}, {"zip": 90035, "decline": -96.5, "income": 105013, "rent_burden": 56.2, "white_pct": 60.7, "black_pct": 7.0, "asian_pct": 7.1, "hispanic_pct": 13.7}, {"zip": 90036, "decline": -94.9, "income": 109785, "rent_burden": 53.2, "white_pct": 54.3, "black_pct": 6.9, "asian_pct": 18.2, "hispanic_pct": 13.1}, {"zip": 90037, "decline": -93.4, "income": 57622, "rent_burden": 55.5, "white_pct": 2.0, "black_pct": 15.1, "asian_pct": 1.2, "hispanic_pct": 79.0}, {"zip": 90038, "decline": -93.3, "income": 61454, "rent_burden": 56.3, "white_pct": 31.7, "black_pct": 7.5, "asian_pct": 7.7, "hispanic_pct": 48.1}, {"zip": 90039, "decline": -86.3, "income": 113818, "rent_burden": 51.2, "white_pct": 42.4, "black_pct": 1.6, "asian_pct": 18.2, "hispanic_pct": 31.4}, {"zip": 90040, "decline": -63.0, "income": 74472, "rent_burden": 52.3, "white_pct": 1.1, "black_pct": 0.5, "asian_pct": 0.9, "hispanic_pct": 96.6}, {"zip": 90041, "decline": 21.6, "income": 114526, "rent_burden": 48.8, "white_pct": 31.2, "black_pct": 1.2, "asian_pct": 25.4, "hispanic_pct": 34.2}, {"zip": 90042, "decline": -19.5, "income": 95282, "rent_burden": 49.9, "white_pct": 25.9, "black_pct": 2.1, "asian_pct": 12.2, "hispanic_pct": 55.4}, {"zip": 90043, "decline": -94.7, "income": 64792, "rent_burden": 64.3, "white_pct": 6.5, "black_pct": 56.0, "asian_pct": 2.2, "hispanic_pct": 28.2}, {"zip": 90044, "decline": -96.2, "income": 53302, "rent_burden": 64.8, "white_pct": 1.5, "black_pct": 26.6, "asian_pct": 0.5, "hispanic_pct": 69.5}, {"zip": 90045, "decline": -84.1, "income": 135032, "rent_burden": 54.6, "white_pct": 48.2, "black_pct": 8.0, "asian_pct": 15.6, "hispanic_pct": 20.1}, {"zip": 90046, "decline": -96.7, "income": 96250, "rent_burden": 47.8, "white_pct": 64.2, "black_pct": 5.3, "asian_pct": 7.3, "hispanic_pct": 16.9}, {"zip": 90047, "decline": -89.3, "income": 71664, "rent_burden": 64.0, "white_pct": 2.4, "black_pct": 50.7, "asian_pct": 1.1, "hispanic_pct": 40.3}, {"zip": 90048, "decline": -91.9, "income": 103495, "rent_burden": 56.0, "white_pct": 69.7, "black_pct": 3.7, "asian_pct": 9.9, "hispanic_pct": 9.3}, {"zip": 90049, "decline": -99.0, "income": 170607, "rent_burden": 42.4, "white_pct": 72.3, "black_pct": 1.9, "asian_pct": 9.9, "hispanic_pct": 8.5}, {"zip": 90056, "decline": -100.0, "income": 133048, "rent_burden": 42.5, "white_pct": 12.7, "black_pct": 57.5, "asian_pct": 4.0, "hispanic_pct": 14.7}, {"zip": 90057, "decline": -99.7, "income": 44823, "rent_burden": 59.7, "white_pct": 5.2, "black_pct": 6.8, "asian_pct": 19.0, "hispanic_pct": 67.1}, {"zip": 90058, "decline": -100.0, "income": 37557, "rent_burden": 62.7, "white_pct": 9.5, "black_pct": 10.8, "asian_pct": 1.4, "hispanic_pct": 75.7}, {"zip": 90059, "decline": -75.0, "income": 56152, "rent_burden": 58.7, "white_pct": 1.1, "black_pct": 20.4, "asian_pct": 1.4, "hispanic_pct": 75.1}, {"zip": 90061, "decline": -87.1, "income": 61046, "rent_burden": 59.9, "white_pct": 1.6, "black_pct": 25.4, "asian_pct": 0.4, "hispanic_pct": 70.4}, {"zip": 90062, "decline": -76.9, "income": 67701, "rent_burden": 61.4, "white_pct": 3.0, "black_pct": 22.3, "asian_pct": 1.6, "hispanic_pct": 66.8}, {"zip": 90063, "decline": -79.1, "income": 72942, "rent_burden": 44.8, "white_pct": 2.9, "black_pct": 0.4, "asian_pct": 2.5, "hispanic_pct": 93.5}, {"zip": 90064, "decline": -97.1, "income": 135383, "rent_burden": 50.1, "white_pct": 52.6, "black_pct": 4.3, "asian_pct": 19.2, "hispanic_pct": 13.7}, {"zip": 90065, "decline": -78.1, "income": 94784, "rent_burden": 51.1, "white_pct": 28.8, "black_pct": 1.6, "asian_pct": 13.4, "hispanic_pct": 51.0}, {"zip": 90066, "decline": -94.9, "income": 114141, "rent_burden": 41.2, "white_pct": 48.6, "black_pct": 3.8, "asian_pct": 15.2, "hispanic_pct": 24.6}, {"zip": 90067, "decline": -75.0, "income": 195433, "rent_burden": 43.1, "white_pct": 58.9, "black_pct": 3.4, "asian_pct": 21.0, "hispanic_pct": 3.9}, {"zip": 90068, "decline": -85.7, "income": 101630, "rent_burden": 56.0, "white_pct": 67.2, "black_pct": 7.0, "asian_pct": 5.9, "hispanic_pct": 12.9}, {"zip": 90069, "decline": -91.6, "income": 107987, "rent_burden": 48.3, "white_pct": 74.6, "black_pct": 3.3, "asian_pct": 6.5, "hispanic_pct": 8.4}, {"zip": 90077, "decline": -100.0, "income": 206319, "rent_burden": 40.8, "white_pct": 75.6, "black_pct": 1.4, "asian_pct": 9.9, "hispanic_pct": 8.6}, {"zip": 90094, "decline": -100.0, "income": 145744, "rent_burden": 49.7, "white_pct": 51.0, "black_pct": 9.2, "asian_pct": 17.9, "hispanic_pct": 13.0}, {"zip": 90201, "decline": -96.4, "income": 60927, "rent_burden": 58.2, "white_pct": 3.6, "black_pct": 1.0, "asian_pct": 0.6, "hispanic_pct": 94.4}, {"zip": 90210, "decline": -91.2, "income": 187801, "rent_burden": 53.7, "white_pct": 78.3, "black_pct": 2.1, "asian_pct": 8.6, "hispanic_pct": 6.0}, {"zip": 90211, "decline": -93.2, "income": 122694, "rent_burden": 53.1, "white_pct": 61.0, "black_pct": 1.4, "asian_pct": 20.7, "hispanic_pct": 7.5}, {"zip": 90212, "decline": -94.7, "income": 118019, "rent_burden": 49.5, "white_pct": 65.5, "black_pct": 2.6, "asian_pct": 11.4, "hispanic_pct": 11.7}, {"zip": 90220, "decline": -80.8, "income": 82335, "rent_burden": 55.1, "white_pct": 1.3, "black_pct": 27.1, "asian_pct": 1.2, "hispanic_pct": 68.5}, {"zip": 90221, "decline": -89.2, "income": 72937, "rent_burden": 52.9, "white_pct": 0.8, "black_pct": 16.6, "asian_pct": 1.1, "hispanic_pct": 80.1}, {"zip": 90222, "decline": -83.3, "income": 78425, "rent_burden": 54.9, "white_pct": 0.8, "black_pct": 21.5, "asian_pct": 0.9, "hispanic_pct": 75.9}, {"zip": 90230, "decline": -92.9, "income": 107109, "rent_burden": 53.0, "white_pct": 38.2, "black_pct": 7.9, "asian_pct": 17.7, "hispanic_pct": 27.7}, {"zip": 90232, "decline": -95.3, "income": 122396, "rent_burden": 47.0, "white_pct": 46.0, "black_pct": 2.3, "asian_pct": 21.9, "hispanic_pct": 23.3}, {"zip": 90240, "decline": -100.0, "income": 101904, "rent_burden": 57.5, "white_pct": 13.2, "black_pct": 3.4, "asian_pct": 9.5, "hispanic_pct": 71.9}, {"zip": 90241, "decline": -87.2, "income": 88006, "rent_burden": 52.7, "white_pct": 13.1, "black_pct": 3.1, "asian_pct": 5.8, "hispanic_pct": 75.4}, {"zip": 90242, "decline": -97.5, "income": 89075, "rent_burden": 59.2, "white_pct": 9.5, "black_pct": 3.6, "asian_pct": 7.6, "hispanic_pct": 77.1}, {"zip": 90245, "decline": 25.0, "income": 150737, "rent_burden": 34.6, "white_pct": 56.9, "black_pct": 2.9, "asian_pct": 11.3, "hispanic_pct": 19.9}, {"zip": 90247, "decline": -13.8, "income": 77333, "rent_burden": 52.4, "white_pct": 6.4, "black_pct": 12.7, "asian_pct": 25.4, "hispanic_pct": 50.9}, {"zip": 90248, "decline": -80.0, "income": 91176, "rent_burden": 40.4, "white_pct": 9.1, "black_pct": 19.1, "asian_pct": 35.8, "hispanic_pct": 28.0}, {"zip": 90249, "decline": -70.5, "income": 89712, "rent_burden": 57.2, "white_pct": 9.5, "black_pct": 23.4, "asian_pct": 14.9, "hispanic_pct": 46.7}, {"zip": 90250, "decline": -97.1, "income": 78331, "rent_burden": 56.9, "white_pct": 11.0, "black_pct": 22.7, "asian_pct": 8.2, "hispanic_pct": 53.6}, {"zip": 90254, "decline": -91.9, "income": 166442, "rent_burden": 42.5, "white_pct": 70.1, "black_pct": 0.9, "asian_pct": 7.2, "hispanic_pct": 11.9}, {"zip": 90255, "decline": -95.7, "income": 64766, "rent_burden": 55.4, "white_pct": 1.7, "black_pct": 0.7, "asian_pct": 0.5, "hispanic_pct": 96.8}, {"zip": 90260, "decline": -86.6, "income": 87825, "rent_burden": 53.9, "white_pct": 16.8, "black_pct": 5.6, "asian_pct": 11.5, "hispanic_pct": 62.7}, {"zip": 90262, "decline": -73.3, "income": 75194, "rent_burden": 57.8, "white_pct": 2.2, "black_pct": 8.2, "asian_pct": 0.7, "hispanic_pct": 87.9}, {"zip": 90265, "decline": -85.7, "income": 196742, "rent_burden": 37.7, "white_pct": 74.3, "black_pct": 1.9, "asian_pct": 5.0, "hispanic_pct": 9.7}, {"zip": 90266, "decline": -86.7, "income": 204306, "rent_burden": 37.4, "white_pct": 71.1, "black_pct": 0.8, "asian_pct": 13.3, "hispanic_pct": 7.7}, {"zip": 90270, "decline": -98.1, "income": 61165, "rent_burden": 54.4, "white_pct": 0.9, "black_pct": 0.2, "asian_pct": 0.6, "hispanic_pct": 97.2}, {"zip": 90272, "decline": -100.0, "income": 189713, "rent_burden": 51.6, "white_pct": 78.7, "black_pct": 0.8, "asian_pct": 6.6, "hispanic_pct": 4.4}, {"zip": 90274, "decline": -100.0, "income": 215925, "rent_burden": 47.7, "white_pct": 58.6, "black_pct": 3.4, "asian_pct": 23.6, "hispanic_pct": 6.3}, {"zip": 90275, "decline": -90.0, "income": 179469, "rent_burden": 44.0, "white_pct": 46.7, "black_pct": 1.6, "asian_pct": 31.8, "hispanic_pct": 12.1}, {"zip": 90277, "decline": -92.7, "income": 127795, "rent_burden": 49.4, "white_pct": 62.4, "black_pct": 2.4, "asian_pct": 12.7, "hispanic_pct": 15.1}, {"zip": 90278, "decline": -86.7, "income": 160236, "rent_burden": 40.2, "white_pct": 50.2, "black_pct": 2.5, "asian_pct": 20.9, "hispanic_pct": 15.0}, {"zip": 90280, "decline": -88.2, "income": 74651, "rent_burden": 52.3, "white_pct": 2.2, "black_pct": 0.9, "asian_pct": 0.9, "hispanic_pct": 95.1}, {"zip": 90291, "decline": -97.0, "income": 122738, "rent_burden": 49.9, "white_pct": 65.1, "black_pct": 4.4, "asian_pct": 6.2, "hispanic_pct": 16.9}, {"zip": 90292, "decline": -73.7, "income": 146167, "rent_burden": 48.5, "white_pct": 60.8, "black_pct": 8.2, "asian_pct": 7.8, "hispanic_pct": 12.6}, {"zip": 90293, "decline": -91.5, "income": 134313, "rent_burden": 46.8, "white_pct": 61.9, "black_pct": 4.8, "asian_pct": 10.6, "hispanic_pct": 16.7}, {"zip": 90301, "decline": -97.4, "income": 65806, "rent_burden": 58.1, "white_pct": 6.1, "black_pct": 28.7, "asian_pct": 3.4, "hispanic_pct": 57.5}, {"zip": 90302, "decline": -96.3, "income": 73777, "rent_burden": 60.6, "white_pct": 8.9, "black_pct": 40.9, "asian_pct": 1.4, "hispanic_pct": 42.2}, {"zip": 90303, "decline": -94.5, "income": 72815, "rent_burden": 64.8, "white_pct": 3.1, "black_pct": 31.5, "asian_pct": 1.4, "hispanic_pct": 60.9}, {"zip": 90304, "decline": -86.1, "income": 64125, "rent_burden": 56.9, "white_pct": 2.5, "black_pct": 4.6, "asian_pct": 4.8, "hispanic_pct": 86.3}, {"zip": 90305, "decline": -100.0, "income": 92665, "rent_burden": 65.0, "white_pct": 4.8, "black_pct": 75.5, "asian_pct": 1.5, "hispanic_pct": 13.4}, {"zip": 90401, "decline": -81.3, "income": 110385, "rent_burden": 41.2, "white_pct": 65.1, "black_pct": 3.8, "asian_pct": 9.8, "hispanic_pct": 12.2}, {"zip": 90402, "decline": -100.0, "income": 159100, "rent_burden": 39.4, "white_pct": 76.1, "black_pct": 0.3, "asian_pct": 9.6, "hispanic_pct": 7.7}, {"zip": 90403, "decline": -96.8, "income": 121925, "rent_burden": 41.2, "white_pct": 66.3, "black_pct": 2.7, "asian_pct": 11.2, "hispanic_pct": 11.5}, {"zip": 90404, "decline": -93.4, "income": 95139, "rent_burden": 44.2, "white_pct": 46.6, "black_pct": 9.9, "asian_pct": 11.4, "hispanic_pct": 24.1}, {"zip": 90405, "decline": -91.9, "income": 121241, "rent_burden": 44.2, "white_pct": 66.6, "black_pct": 5.5, "asian_pct": 7.7, "hispanic_pct": 14.3}, {"zip": 90501, "decline": -96.7, "income": 92923, "rent_burden": 58.4, "white_pct": 19.9, "black_pct": 7.3, "asian_pct": 27.8, "hispanic_pct": 41.0}, {"zip": 90503, "decline": -87.3, "income": 125912, "rent_burden": 47.4, "white_pct": 32.2, "black_pct": 3.6, "asian_pct": 40.3, "hispanic_pct": 14.0}, {"zip": 90504, "decline": -97.1, "income": 107552, "rent_burden": 54.8, "white_pct": 23.0, "black_pct": 4.0, "asian_pct": 39.5, "hispanic_pct": 26.1}, {"zip": 90505, "decline": -87.5, "income": 115593, "rent_burden": 50.6, "white_pct": 37.8, "black_pct": 3.3, "asian_pct": 37.3, "hispanic_pct": 15.5}, {"zip": 90601, "decline": -93.2, "income": 104052, "rent_burden": 52.8, "white_pct": 16.9, "black_pct": 1.4, "asian_pct": 6.1, "hispanic_pct": 70.6}, {"zip": 90602, "decline": -87.2, "income": 68505, "rent_burden": 63.3, "white_pct": 17.4, "black_pct": 1.9, "asian_pct": 2.5, "hispanic_pct": 74.6}, {"zip": 90603, "decline": -100.0, "income": 136705, "rent_burden": 51.1, "white_pct": 30.7, "black_pct": 0.8, "asian_pct": 6.2, "hispanic_pct": 59.1}, {"zip": 90604, "decline": -100.0, "income": 105074, "rent_burden": 50.7, "white_pct": 18.1, "black_pct": 1.4, "asian_pct": 8.2, "hispanic_pct": 69.6}, {"zip": 90605, "decline": -89.5, "income": 99635, "rent_burden": 49.9, "white_pct": 14.1, "black_pct": 1.2, "asian_pct": 5.7, "hispanic_pct": 76.2}, {"zip": 90606, "decline": -100.0, "income": 100428, "rent_burden": 53.4, "white_pct": 7.3, "black_pct": 1.0, "asian_pct": 5.3, "hispanic_pct": 84.7}, {"zip": 90638, "decline": -50.0, "income": 109649, "rent_burden": 55.2, "white_pct": 25.2, "black_pct": 3.0, "asian_pct": 21.2, "hispanic_pct": 47.0}, {"zip": 90640, "decline": -74.3, "income": 79625, "rent_burden": 57.0, "white_pct": 7.0, "black_pct": 0.7, "asian_pct": 13.9, "hispanic_pct": 76.3}, {"zip": 90650, "decline": -73.0, "income": 100085, "rent_burden": 54.3, "white_pct": 10.3, "black_pct": 3.8, "asian_pct": 12.9, "hispanic_pct": 70.4}, {"zip": 90660, "decline": -75.0, "income": 88201, "rent_burden": 58.5, "white_pct": 4.2, "black_pct": 1.5, "asian_pct": 3.4, "hispanic_pct": 90.1}, {"zip": 90670, "decline": -87.0, "income": 88872, "rent_burden": 54.0, "white_pct": 7.2, "black_pct": 1.3, "asian_pct": 7.3, "hispanic_pct": 79.5}, {"zip": 90701, "decline": -38.5, "income": 101004, "rent_burden": 46.8, "white_pct": 13.1, "black_pct": 5.2, "asian_pct": 43.2, "hispanic_pct": 33.1}, {"zip": 90703, "decline": -100.0, "income": 134987, "rent_burden": 32.2, "white_pct": 11.6, "black_pct": 5.7, "asian_pct": 61.2, "hispanic_pct": 16.4}, {"zip": 90704, "decline": 6.7, "income": 105139, "rent_burden": 54.9, "white_pct": 44.6, "black_pct": 0.2, "asian_pct": 0.3, "hispanic_pct": 54.9}, {"zip": 90706, "decline": -75.4, "income": 78722, "rent_burden": 56.0, "white_pct": 13.9, "black_pct": 10.5, "asian_pct": 11.3, "hispanic_pct": 60.4}, {"zip": 90710, "decline": -68.6, "income": 82478, "rent_burden": 56.1, "white_pct": 13.9, "black_pct": 10.7, "asian_pct": 22.9, "hispanic_pct": 47.6}, {"zip": 90712, "decline": -100.0, "income": 122435, "rent_burden": 44.7, "white_pct": 31.1, "black_pct": 8.2, "asian_pct": 15.5, "hispanic_pct": 38.5}, {"zip": 90713, "decline": -73.3, "income": 133419, "rent_burden": 45.9, "white_pct": 42.4, "black_pct": 3.2, "asian_pct": 12.3, "hispanic_pct": 34.6}, {"zip": 90715, "decline": -62.5, "income": 91875, "rent_burden": 53.2, "white_pct": 12.9, "black_pct": 9.0, "asian_pct": 26.0, "hispanic_pct": 46.4}, {"zip": 90716, "decline": -60.0, "income": 76410, "rent_burden": 52.3, "white_pct": 6.6, "black_pct": 3.9, "asian_pct": 12.5, "hispanic_pct": 75.6}, {"zip": 90717, "decline": -79.5, "income": 94241, "rent_burden": 48.0, "white_pct": 33.1, "black_pct": 4.2, "asian_pct": 17.0, "hispanic_pct": 35.9}, {"zip": 90723, "decline": -100.0, "income": 75250, "rent_burden": 56.4, "white_pct": 4.1, "black_pct": 9.2, "asian_pct": 3.7, "hispanic_pct": 81.3}, {"zip": 90731, "decline": -88.1, "income": 76395, "rent_burden": 54.8, "white_pct": 27.4, "black_pct": 4.9, "asian_pct": 5.1, "hispanic_pct": 56.4}, {"zip": 90732, "decline": -100.0, "income": 120807, "rent_burden": 52.3, "white_pct": 47.4, "black_pct": 4.0, "asian_pct": 9.7, "hispanic_pct": 33.6}, {"zip": 90744, "decline": -83.7, "income": 60847, "rent_burden": 60.0, "white_pct": 3.8, "black_pct": 3.4, "asian_pct": 3.6, "hispanic_pct": 87.9}, {"zip": 90745, "decline": -50.0, "income": 107988, "rent_burden": 52.3, "white_pct": 6.9, "black_pct": 6.8, "asian_pct": 36.8, "hispanic_pct": 43.6}, {"zip": 90746, "decline": -75.0, "income": 113364, "rent_burden": 48.0, "white_pct": 4.7, "black_pct": 58.9, "asian_pct": 8.7, "hispanic_pct": 21.0}, {"zip": 90755, "decline": -90.9, "income": 113512, "rent_burden": 39.8, "white_pct": 26.9, "black_pct": 6.3, "asian_pct": 22.9, "hispanic_pct": 37.2}, {"zip": 90804, "decline": 0.0, "income": 71614, "rent_burden": 58.5, "white_pct": 23.6, "black_pct": 12.1, "asian_pct": 12.3, "hispanic_pct": 48.3}, {"zip": 90807, "decline": -100.0, "income": 103777, "rent_burden": 53.1, "white_pct": 35.1, "black_pct": 15.1, "asian_pct": 14.6, "hispanic_pct": 26.7}, {"zip": 90810, "decline": -62.5, "income": 84350, "rent_burden": 44.5, "white_pct": 6.6, "black_pct": 8.9, "asian_pct": 23.7, "hispanic_pct": 55.7}, {"zip": 91001, "decline": -100.0, "income": 134903, "rent_burden": 60.3, "white_pct": 36.9, "black_pct": 20.0, "asian_pct": 6.2, "hispanic_pct": 28.6}, {"zip": 91006, "decline": -63.0, "income": 123533, "rent_burden": 48.9, "white_pct": 16.5, "black_pct": 0.8, "asian_pct": 57.6, "hispanic_pct": 20.6}, {"zip": 91007, "decline": -85.0, "income": 100705, "rent_burden": 56.6, "white_pct": 18.6, "black_pct": 2.1, "asian_pct": 56.7, "hispanic_pct": 16.7}, {"zip": 91010, "decline": -71.4, "income": 102705, "rent_burden": 50.1, "white_pct": 20.7, "black_pct": 4.2, "asian_pct": 15.2, "hispanic_pct": 55.2}, {"zip": 91011, "decline": -66.7, "income": 241875, "rent_burden": 45.0, "white_pct": 53.9, "black_pct": 0.7, "asian_pct": 30.8, "hispanic_pct": 7.7}, {"zip": 91016, "decline": -81.9, "income": 96540, "rent_burden": 51.6, "white_pct": 28.1, "black_pct": 5.2, "asian_pct": 15.2, "hispanic_pct": 45.4}, {"zip": 91020, "decline": 212.5, "income": 72125, "rent_burden": 60.3, "white_pct": 50.2, "black_pct": 0.5, "asian_pct": 18.8, "hispanic_pct": 19.5}, {"zip": 91024, "decline": -100.0, "income": 143547, "rent_burden": 40.6, "white_pct": 51.6, "black_pct": 6.6, "asian_pct": 17.1, "hispanic_pct": 17.9}, {"zip": 91030, "decline": -97.8, "income": 127175, "rent_burden": 44.9, "white_pct": 35.2, "black_pct": 2.8, "asian_pct": 35.0, "hispanic_pct": 19.7}, {"zip": 91040, "decline": 154.5, "income": 98256, "rent_burden": 61.0, "white_pct": 60.3, "black_pct": 2.4, "asian_pct": 8.0, "hispanic_pct": 24.8}, {"zip": 91042, "decline": 65.7, "income": 85603, "rent_burden": 61.0, "white_pct": 60.2, "black_pct": 1.3, "asian_pct": 7.5, "hispanic_pct": 26.3}, {"zip": 91104, "decline": -100.0, "income": 105958, "rent_burden": 47.5, "white_pct": 39.0, "black_pct": 5.4, "asian_pct": 9.9, "hispanic_pct": 39.0}, {"zip": 91105, "decline": 0.0, "income": 156791, "rent_burden": 36.2, "white_pct": 52.2, "black_pct": 2.7, "asian_pct": 20.6, "hispanic_pct": 17.7}, {"zip": 91107, "decline": -50.0, "income": 126449, "rent_burden": 53.2, "white_pct": 37.9, "black_pct": 5.1, "asian_pct": 24.8, "hispanic_pct": 26.2}, {"zip": 91108, "decline": -100.0, "income": 204847, "rent_burden": 37.6, "white_pct": 22.4, "black_pct": 0.1, "asian_pct": 67.5, "hispanic_pct": 5.4}, {"zip": 91201, "decline": -99.3, "income": 82301, "rent_burden": 59.3, "white_pct": 70.4, "black_pct": 0.6, "asian_pct": 5.3, "hispanic_pct": 18.5}, {"zip": 91202, "decline": -100.0, "income": 96459, "rent_burden": 58.0, "white_pct": 72.2, "black_pct": 1.0, "asian_pct": 12.2, "hispanic_pct": 11.6}, {"zip": 91203, "decline": -97.7, "income": 82364, "rent_burden": 59.1, "white_pct": 58.4, "black_pct": 2.8, "asian_pct": 16.0, "hispanic_pct": 18.7}, {"zip": 91204, "decline": -96.9, "income": 74144, "rent_burden": 58.0, "white_pct": 50.0, "black_pct": 2.4, "asian_pct": 15.6, "hispanic_pct": 29.7}, {"zip": 91205, "decline": -98.8, "income": 64564, "rent_burden": 59.5, "white_pct": 57.5, "black_pct": 1.6, "asian_pct": 10.8, "hispanic_pct": 26.7}, {"zip": 91206, "decline": -99.7, "income": 89188, "rent_burden": 57.3, "white_pct": 65.9, "black_pct": 1.4, "asian_pct": 12.0, "hispanic_pct": 16.8}, {"zip": 91207, "decline": -100.0, "income": 118116, "rent_burden": 65.6, "white_pct": 80.7, "black_pct": 0.1, "asian_pct": 8.7, "hispanic_pct": 6.1}, {"zip": 91208, "decline": -100.0, "income": 136892, "rent_burden": 57.5, "white_pct": 62.6, "black_pct": 0.4, "asian_pct": 10.0, "hispanic_pct": 12.9}, {"zip": 91210, "decline": -100.0, "income": 107656, "rent_burden": 79.7, "white_pct": 62.2, "black_pct": 0.0, "asian_pct": 26.3, "hispanic_pct": 0.0}, {"zip": 91214, "decline": 192.3, "income": 140121, "rent_burden": 47.5, "white_pct": 50.1, "black_pct": 0.8, "asian_pct": 28.0, "hispanic_pct": 14.3}, {"zip": 91301, "decline": -27.8, "income": 163317, "rent_burden": 56.7, "white_pct": 69.5, "black_pct": 0.7, "asian_pct": 7.4, "hispanic_pct": 14.5}, {"zip": 91302, "decline": -12.5, "income": 185636, "rent_burden": 63.3, "white_pct": 72.5, "black_pct": 3.1, "asian_pct": 9.2, "hispanic_pct": 9.5}, {"zip": 91303, "decline": -72.1, "income": 74474, "rent_burden": 54.8, "white_pct": 27.1, "black_pct": 4.7, "asian_pct": 7.6, "hispanic_pct": 58.1}, {"zip": 91304, "decline": -26.6, "income": 90007, "rent_burden": 62.2, "white_pct": 32.0, "black_pct": 4.2, "asian_pct": 15.0, "hispanic_pct": 43.1}, {"zip": 91306, "decline": -85.1, "income": 93151, "rent_burden": 65.4, "white_pct": 24.5, "black_pct": 3.5, "asian_pct": 20.0, "hispanic_pct": 46.8}, {"zip": 91307, "decline": -100.0, "income": 151190, "rent_burden": 52.8, "white_pct": 57.7, "black_pct": 4.2, "asian_pct": 15.1, "hispanic_pct": 17.4}, {"zip": 91311, "decline": -91.7, "income": 119386, "rent_burden": 52.0, "white_pct": 40.3, "black_pct": 7.0, "asian_pct": 17.7, "hispanic_pct": 28.8}, {"zip": 91316, "decline": -20.0, "income": 92311, "rent_burden": 61.7, "white_pct": 69.0, "black_pct": 2.6, "asian_pct": 6.1, "hispanic_pct": 14.1}, {"zip": 91321, "decline": -80.8, "income": 91092, "rent_burden": 68.3, "white_pct": 31.9, "black_pct": 2.2, "asian_pct": 8.9, "hispanic_pct": 52.9}, {"zip": 91324, "decline": -34.2, "income": 99610, "rent_burden": 66.8, "white_pct": 31.1, "black_pct": 5.1, "asian_pct": 18.9, "hispanic_pct": 40.5}, {"zip": 91325, "decline": -63.4, "income": 87168, "rent_burden": 64.8, "white_pct": 34.9, "black_pct": 5.2, "asian_pct": 16.3, "hispanic_pct": 38.7}, {"zip": 91331, "decline": -69.4, "income": 84227, "rent_burden": 60.4, "white_pct": 3.8, "black_pct": 1.8, "asian_pct": 4.7, "hispanic_pct": 88.3}, {"zip": 91335, "decline": -58.7, "income": 80143, "rent_burden": 62.1, "white_pct": 26.4, "black_pct": 3.4, "asian_pct": 13.1, "hispanic_pct": 52.8}, {"zip": 91340, "decline": -81.8, "income": 85261, "rent_burden": 64.6, "white_pct": 3.7, "black_pct": 1.9, "asian_pct": 2.0, "hispanic_pct": 91.7}, {"zip": 91342, "decline": -87.5, "income": 98118, "rent_burden": 57.5, "white_pct": 12.3, "black_pct": 3.8, "asian_pct": 7.8, "hispanic_pct": 73.2}, {"zip": 91343, "decline": -40.0, "income": 81430, "rent_burden": 64.3, "white_pct": 20.5, "black_pct": 3.4, "asian_pct": 14.1, "hispanic_pct": 58.5}, {"zip": 91344, "decline": -7.1, "income": 119345, "rent_burden": 57.0, "white_pct": 44.9, "black_pct": 2.7, "asian_pct": 16.3, "hispanic_pct": 31.1}, {"zip": 91345, "decline": -60.0, "income": 94215, "rent_burden": 67.9, "white_pct": 16.6, "black_pct": 3.6, "asian_pct": 8.6, "hispanic_pct": 68.4}, {"zip": 91350, "decline": -50.0, "income": 140110, "rent_burden": 60.9, "white_pct": 43.0, "black_pct": 5.0, "asian_pct": 12.5, "hispanic_pct": 32.5}, {"zip": 91351, "decline": -59.1, "income": 115364, "rent_burden": 49.9, "white_pct": 32.6, "black_pct": 3.7, "asian_pct": 8.0, "hispanic_pct": 50.6}, {"zip": 91352, "decline": -34.4, "income": 78239, "rent_burden": 61.0, "white_pct": 23.4, "black_pct": 2.4, "asian_pct": 4.5, "hispanic_pct": 67.7}, {"zip": 91354, "decline": 0.0, "income": 156173, "rent_burden": 54.4, "white_pct": 46.1, "black_pct": 5.4, "asian_pct": 22.1, "hispanic_pct": 19.4}, {"zip": 91355, "decline": 0.0, "income": 115640, "rent_burden": 54.2, "white_pct": 57.8, "black_pct": 2.5, "asian_pct": 11.0, "hispanic_pct": 20.6}, {"zip": 91356, "decline": -83.3, "income": 107378, "rent_burden": 56.4, "white_pct": 60.3, "black_pct": 5.3, "asian_pct": 8.7, "hispanic_pct": 18.5}, {"zip": 91361, "decline": 0.0, "income": 144900, "rent_burden": 45.1, "white_pct": 72.1, "black_pct": 0.6, "asian_pct": 7.0, "hispanic_pct": 11.1}, {"zip": 91362, "decline": 0.0, "income": 139800, "rent_burden": 52.9, "white_pct": 65.8, "black_pct": 2.1, "asian_pct": 9.1, "hispanic_pct": 17.0}, {"zip": 91364, "decline": -48.0, "income": 132854, "rent_burden": 62.8, "white_pct": 60.2, "black_pct": 5.4, "asian_pct": 10.6, "hispanic_pct": 12.9}, {"zip": 91367, "decline": -70.6, "income": 108653, "rent_burden": 52.2, "white_pct": 54.9, "black_pct": 8.3, "asian_pct": 14.9, "hispanic_pct": 15.0}, {"zip": 91381, "decline": 500.0, "income": 158504, "rent_burden": 57.4, "white_pct": 38.5, "black_pct": 3.9, "asian_pct": 29.4, "hispanic_pct": 20.0}, {"zip": 91387, "decline": -100.0, "income": 117969, "rent_burden": 52.1, "white_pct": 33.4, "black_pct": 6.5, "asian_pct": 10.8, "hispanic_pct": 43.6}, {"zip": 91390, "decline": 0.0, "income": 151897, "rent_burden": 63.4, "white_pct": 61.0, "black_pct": 2.1, "asian_pct": 5.9, "hispanic_pct": 25.8}, {"zip": 91401, "decline": -25.2, "income": 79552, "rent_burden": 56.7, "white_pct": 40.5, "black_pct": 4.1, "asian_pct": 5.3, "hispanic_pct": 45.2}, {"zip": 91402, "decline": -20.4, "income": 57369, "rent_burden": 65.5, "white_pct": 11.6, "black_pct": 3.5, "asian_pct": 13.9, "hispanic_pct": 69.5}, {"zip": 91403, "decline": -76.8, "income": 116170, "rent_burden": 53.0, "white_pct": 65.7, "black_pct": 4.2, "asian_pct": 8.2, "hispanic_pct": 15.6}, {"zip": 91405, "decline": -62.3, "income": 62900, "rent_burden": 64.1, "white_pct": 24.2, "black_pct": 4.0, "asian_pct": 9.1, "hispanic_pct": 59.4}, {"zip": 91406, "decline": -5.1, "income": 78429, "rent_burden": 59.2, "white_pct": 26.0, "black_pct": 3.7, "asian_pct": 8.3, "hispanic_pct": 58.3}, {"zip": 91411, "decline": -73.4, "income": 74617, "rent_burden": 62.7, "white_pct": 32.5, "black_pct": 6.7, "asian_pct": 8.7, "hispanic_pct": 47.3}, {"zip": 91423, "decline": -56.4, "income": 109461, "rent_burden": 52.9, "white_pct": 63.9, "black_pct": 5.9, "asian_pct": 5.7, "hispanic_pct": 15.0}, {"zip": 91436, "decline": -100.0, "income": 177981, "rent_burden": 64.4, "white_pct": 74.8, "black_pct": 2.0, "asian_pct": 7.4, "hispanic_pct": 9.6}, {"zip": 91501, "decline": -18.5, "income": 91936, "rent_burden": 63.5, "white_pct": 65.6, "black_pct": 3.0, "asian_pct": 8.7, "hispanic_pct": 15.4}, {"zip": 91502, "decline": 7.7, "income": 52473, "rent_burden": 61.2, "white_pct": 49.5, "black_pct": 4.4, "asian_pct": 12.9, "hispanic_pct": 28.9}, {"zip": 91504, "decline": 12.6, "income": 103835, "rent_burden": 58.8, "white_pct": 55.3, "black_pct": 5.4, "asian_pct": 11.1, "hispanic_pct": 22.3}, {"zip": 91505, "decline": -19.4, "income": 109953, "rent_burden": 48.9, "white_pct": 50.0, "black_pct": 4.0, "asian_pct": 12.1, "hispanic_pct": 26.6}, {"zip": 91506, "decline": -25.0, "income": 105955, "rent_burden": 54.6, "white_pct": 50.0, "black_pct": 2.4, "asian_pct": 13.6, "hispanic_pct": 28.3}, {"zip": 91601, "decline": -63.1, "income": 79607, "rent_burden": 60.5, "white_pct": 42.7, "black_pct": 11.0, "asian_pct": 7.8, "hispanic_pct": 33.7}, {"zip": 91602, "decline": -52.8, "income": 102914, "rent_burden": 60.7, "white_pct": 54.9, "black_pct": 8.5, "asian_pct": 9.1, "hispanic_pct": 20.2}, {"zip": 91604, "decline": -27.1, "income": 141875, "rent_burden": 46.9, "white_pct": 68.4, "black_pct": 4.1, "asian_pct": 8.3, "hispanic_pct": 11.9}, {"zip": 91605, "decline": -39.4, "income": 65481, "rent_burden": 63.2, "white_pct": 25.8, "black_pct": 1.9, "asian_pct": 9.5, "hispanic_pct": 60.4}, {"zip": 91606, "decline": -67.7, "income": 66200, "rent_burden": 60.8, "white_pct": 32.0, "black_pct": 4.7, "asian_pct": 5.3, "hispanic_pct": 53.9}, {"zip": 91607, "decline": -41.7, "income": 87874, "rent_burden": 56.5, "white_pct": 54.3, "black_pct": 6.3, "asian_pct": 8.2, "hispanic_pct": 23.8}, {"zip": 91702, "decline": -45.1, "income": 92683, "rent_burden": 52.7, "white_pct": 12.6, "black_pct": 2.7, "asian_pct": 13.3, "hispanic_pct": 68.3}, {"zip": 91706, "decline": -74.2, "income": 81122, "rent_burden": 53.0, "white_pct": 3.1, "black_pct": 0.6, "asian_pct": 21.6, "hispanic_pct": 73.2}, {"zip": 91711, "decline": -85.7, "income": 126056, "rent_burden": 53.8, "white_pct": 43.6, "black_pct": 6.8, "asian_pct": 14.5, "hispanic_pct": 29.3}, {"zip": 91722, "decline": -82.6, "income": 102062, "rent_burden": 45.8, "white_pct": 11.4, "black_pct": 4.1, "asian_pct": 15.6, "hispanic_pct": 65.6}, {"zip": 91723, "decline": -80.3, "income": 94167, "rent_burden": 48.0, "white_pct": 19.0, "black_pct": 4.8, "asian_pct": 10.6, "hispanic_pct": 61.6}, {"zip": 91724, "decline": -87.9, "income": 103163, "rent_burden": 53.5, "white_pct": 23.9, "black_pct": 4.1, "asian_pct": 15.2, "hispanic_pct": 52.6}, {"zip": 91731, "decline": -69.9, "income": 62215, "rent_burden": 56.0, "white_pct": 3.4, "black_pct": 0.5, "asian_pct": 27.4, "hispanic_pct": 67.1}, {"zip": 91732, "decline": -74.8, "income": 75108, "rent_burden": 54.3, "white_pct": 3.6, "black_pct": 0.6, "asian_pct": 27.0, "hispanic_pct": 66.7}, {"zip": 91733, "decline": -91.3, "income": 68278, "rent_burden": 59.1, "white_pct": 2.7, "black_pct": 0.7, "asian_pct": 23.4, "hispanic_pct": 72.4}, {"zip": 91740, "decline": -64.3, "income": 99083, "rent_burden": 57.1, "white_pct": 32.3, "black_pct": 3.5, "asian_pct": 9.6, "hispanic_pct": 49.4}, {"zip": 91741, "decline": -100.0, "income": 127440, "rent_burden": 50.1, "white_pct": 47.7, "black_pct": 2.1, "asian_pct": 14.5, "hispanic_pct": 30.1}, {"zip": 91744, "decline": -82.1, "income": 93557, "rent_burden": 50.0, "white_pct": 3.9, "black_pct": 1.0, "asian_pct": 14.6, "hispanic_pct": 78.6}, {"zip": 91745, "decline": -50.0, "income": 109183, "rent_burden": 44.7, "white_pct": 11.1, "black_pct": 1.0, "asian_pct": 42.1, "hispanic_pct": 43.7}, {"zip": 91746, "decline": -66.7, "income": 86567, "rent_burden": 61.6, "white_pct": 2.0, "black_pct": 1.4, "asian_pct": 11.2, "hispanic_pct": 84.5}, {"zip": 91748, "decline": -80.0, "income": 83428, "rent_burden": 55.2, "white_pct": 6.0, "black_pct": 1.4, "asian_pct": 60.5, "hispanic_pct": 30.1}, {"zip": 91750, "decline": -100.0, "income": 104195, "rent_burden": 47.1, "white_pct": 43.7, "black_pct": 3.8, "asian_pct": 10.5, "hispanic_pct": 35.7}, {"zip": 91754, "decline": -53.2, "income": 86331, "rent_burden": 48.3, "white_pct": 6.6, "black_pct": 0.7, "asian_pct": 59.6, "hispanic_pct": 30.1}, {"zip": 91755, "decline": -52.4, "income": 76382, "rent_burden": 60.6, "white_pct": 4.1, "black_pct": 0.5, "asian_pct": 70.4, "hispanic_pct": 21.9}, {"zip": 91765, "decline": -60.0, "income": 105565, "rent_burden": 62.2, "white_pct": 12.1, "black_pct": 3.4, "asian_pct": 61.9, "hispanic_pct": 17.3}, {"zip": 91766, "decline": -94.6, "income": 81991, "rent_burden": 53.9, "white_pct": 7.6, "black_pct": 4.9, "asian_pct": 12.8, "hispanic_pct": 71.8}, {"zip": 91767, "decline": -90.4, "income": 79245, "rent_burden": 53.4, "white_pct": 11.1, "black_pct": 6.5, "asian_pct": 9.2, "hispanic_pct": 69.8}, {"zip": 91768, "decline": -82.8, "income": 76041, "rent_burden": 62.3, "white_pct": 11.2, "black_pct": 4.1, "asian_pct": 8.2, "hispanic_pct": 74.2}, {"zip": 91770, "decline": -77.2, "income": 75000, "rent_burden": 54.1, "white_pct": 3.4, "black_pct": 0.3, "asian_pct": 66.0, "hispanic_pct": 28.7}, {"zip": 91773, "decline": -66.7, "income": 105338, "rent_burden": 62.0, "white_pct": 33.5, "black_pct": 3.4, "asian_pct": 16.4, "hispanic_pct": 41.0}, {"zip": 91775, "decline": 66.7, "income": 118610, "rent_burden": 49.0, "white_pct": 17.4, "black_pct": 1.5, "asian_pct": 51.0, "hispanic_pct": 26.0}, {"zip": 91776, "decline": -86.7, "income": 82155, "rent_burden": 47.1, "white_pct": 6.6, "black_pct": 1.4, "asian_pct": 61.6, "hispanic_pct": 27.4}, {"zip": 91780, "decline": -71.4, "income": 103659, "rent_burden": 51.1, "white_pct": 11.4, "black_pct": 0.5, "asian_pct": 63.4, "hispanic_pct": 21.8}, {"zip": 91789, "decline": -100.0, "income": 125720, "rent_burden": 50.3, "white_pct": 9.6, "black_pct": 1.7, "asian_pct": 67.0, "hispanic_pct": 18.1}, {"zip": 91790, "decline": -13.6, "income": 102927, "rent_burden": 54.1, "white_pct": 10.7, "black_pct": 3.2, "asian_pct": 24.1, "hispanic_pct": 60.0}, {"zip": 91791, "decline": -74.1, "income": 102266, "rent_burden": 57.1, "white_pct": 10.7, "black_pct": 3.0, "asian_pct": 31.8, "hispanic_pct": 51.7}, {"zip": 91792, "decline": -100.0, "income": 94817, "rent_burden": 52.7, "white_pct": 6.4, "black_pct": 5.8, "asian_pct": 39.9, "hispanic_pct": 44.1}, {"zip": 91801, "decline": -83.6, "income": 89156, "rent_burden": 50.0, "white_pct": 9.8, "black_pct": 3.0, "asian_pct": 50.8, "hispanic_pct": 33.3}, {"zip": 91803, "decline": -86.8, "income": 84311, "rent_burden": 49.3, "white_pct": 7.5, "black_pct": 1.1, "asian_pct": 50.4, "hispanic_pct": 38.1}, {"zip": 93534, "decline": -83.7, "income": 61866, "rent_burden": 60.0, "white_pct": 23.0, "black_pct": 23.1, "asian_pct": 3.2, "hispanic_pct": 46.0}, {"zip": 93535, "decline": -86.7, "income": 70360, "rent_burden": 55.7, "white_pct": 16.8, "black_pct": 19.4, "asian_pct": 2.5, "hispanic_pct": 56.0}, {"zip": 93536, "decline": -65.0, "income": 106903, "rent_burden": 53.4, "white_pct": 37.3, "black_pct": 12.0, "asian_pct": 5.6, "hispanic_pct": 39.8}, {"zip": 93550, "decline": -93.3, "income": 62078, "rent_burden": 62.5, "white_pct": 10.5, "black_pct": 13.8, "asian_pct": 2.8, "hispanic_pct": 69.6}, {"zip": 93551, "decline": 66.7, "income": 119801, "rent_burden": 48.6, "white_pct": 30.5, "black_pct": 10.1, "asian_pct": 9.2, "hispanic_pct": 45.2}, {"zip": 93552, "decline": -100.0, "income": 85954, "rent_burden": 59.9, "white_pct": 10.3, "black_pct": 11.7, "asian_pct": 2.2, "hispanic_pct": 73.4}];
+
+const VIEWS = {
+  income: {
+    key: "income",
+    xLabel: "Median Household Income",
+    r2: "0.016",
+    r2Interp: "Less than 2% of variation explained",
+    format: function(v) { return "$" + Math.round(v/1000) + "K"; },
+    legend: [
+      { color: NAVY, label: "Lower income (under $70K)" },
+      { color: NAVY_MID, label: "Middle income ($70K-$140K)" },
+      { color: ORANGE, label: "Higher income (over $140K)" }
+    ],
+    colorFn: function(d) { return d.income < 70000 ? NAVY : d.income < 140000 ? NAVY_MID : ORANGE; }
+  },
+  rent_burden: {
+    key: "rent_burden",
+    xLabel: "Renters stretched by housing costs (30%+ of income on rent)",
+    r2: "0.004",
+    r2Interp: "Less than 1% of variation explained",
+    format: function(v) { return v.toFixed(0) + "%"; },
+    legend: [
+      { color: NAVY, label: "Fewer renters stretched (under 45%)" },
+      { color: NAVY_MID, label: "More renters stretched (45-60%)" },
+      { color: ORANGE, label: "Most renters stretched (over 60%)" }
+    ],
+    colorFn: function(d) { return d.rent_burden < 45 ? NAVY : d.rent_burden < 60 ? NAVY_MID : ORANGE; }
+  }
+};
+
+var chart = null;
+
+function buildLegend(view) {
+  document.getElementById("colorLegend").innerHTML = view.legend.map(function(l) {
+    return '<div class="legend-item"><div class="legend-dot" style="background:' + l.color + ';opacity:0.85;"></div>' + l.label + '</div>';
+  }).join("");
+}
+
+function buildChart(viewKey, highlightZipCode) {
+  var view = VIEWS[viewKey];
+  var xKey = view.key;
+  var points = ALL_DATA.filter(function(d) { return d[xKey] > 0; }).map(function(d) {
+    return { x: d[xKey], y: d.decline, zip: d.zip, color: view.colorFn(d), raw: d, highlight: d.zip === highlightZipCode };
+  });
+
+  var xs = points.map(function(p) { return p.x; });
+  var ys = points.map(function(p) { return p.y; });
+  var n = xs.length;
+  var xMean = xs.reduce(function(a,b){return a+b;},0)/n;
+  var yMean = ys.reduce(function(a,b){return a+b;},0)/n;
+  var slope = xs.reduce(function(s,x,i){return s+(x-xMean)*(ys[i]-yMean);},0) / xs.reduce(function(s,x){return s+(x-xMean)*(x-xMean);},0);
+  var intercept = yMean - slope*xMean;
+  var xMin = Math.min.apply(null, xs);
+  var xMax = Math.max.apply(null, xs);
+
+  var ctx = document.getElementById("scatterChart").getContext("2d");
+  if (chart) chart.destroy();
+
+  chart = new Chart(ctx, {
+    type: "scatter",
+    data: {
+      datasets: [
+        {
+          label: "ZIP codes",
+          data: points,
+          pointBackgroundColor: points.map(function(p) { return p.highlight ? "#FFFFFF" : p.color + "CC"; }),
+          pointBorderColor: points.map(function(p) { return p.highlight ? ORANGE : p.color; }),
+          pointBorderWidth: points.map(function(p) { return p.highlight ? 4 : 0.5; }),
+          pointRadius: points.map(function(p) { return p.highlight ? 16 : 5; }),
+          pointHoverRadius: points.map(function(p) { return p.highlight ? 18 : 8; })
+        },
+        {
+          label: "Trend",
+          data: [{x: xMin, y: slope*xMin+intercept}, {x: xMax, y: slope*xMax+intercept}],
+          type: "line",
+          borderColor: "#9DA3AE",
+          borderWidth: 1.5,
+          borderDash: [5,5],
+          pointRadius: 0,
+          fill: false,
+          tension: 0
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "nearest", intersect: true },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          filter: function(item) { return item.datasetIndex === 0; },
+          callbacks: {
+            title: function(ctx) {
+              return "ZIP Code " + ctx[0].raw.zip + (ctx[0].raw.highlight ? " ★ Selected" : "");
+            },
+            label: function(ctx) {
+              var d = ctx.raw.raw;
+              return [
+                view.xLabel.split("(")[0].trim() + ": " + view.format(d[xKey]),
+                "Inspection change: " + d.decline.toFixed(1) + "%"
+              ];
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: { display: true, text: view.xLabel, color: "#6B7280", font: { size: 11, family: "IBM Plex Sans" } },
+          ticks: { color: "#9DA3AE", font: { size: 11, family: "IBM Plex Sans" }, callback: function(v) { return view.format(v); } },
+          grid: { color: "rgba(0,0,0,0.05)" },
+          border: { display: false }
+        },
+        y: {
+          min: -100, max: 175,
+          title: { display: true, text: "Inspection Change % (2023-2025)", color: "#6B7280", font: { size: 11, family: "IBM Plex Sans" } },
+          ticks: { color: "#9DA3AE", font: { size: 11, family: "IBM Plex Sans" }, callback: function(v) { return v + "%"; } },
+          grid: { color: "rgba(0,0,0,0.05)" },
+          border: { display: false }
+        }
+      },
+      layout: { padding: { top: 10, bottom: 10, left: 10, right: 10 } }
+    }
+  });
+}
+
+function switchTab(el, viewKey) {
+  document.querySelectorAll(".tab").forEach(function(t) { t.classList.remove("active"); });
+  el.classList.add("active");
+  var view = VIEWS[viewKey];
+  document.getElementById("r2Value").textContent = "R² = " + view.r2;
+  document.getElementById("r2Interp").textContent = view.r2Interp;
+  buildLegend(view);
+  buildChart(viewKey, currentHighlight);
+}
+
+var currentHighlight = null;
+
+function searchZip() {
+  var zip = parseInt(document.getElementById("zipInput").value.trim());
+  var resultDiv = document.getElementById("zipResult");
+  var clearBtn = document.getElementById("zipClear");
+
+  if (!zip || isNaN(zip)) {
+    resultDiv.innerHTML = '<p class="zip-not-found">Please enter a valid 5-digit ZIP code.</p>';
+    return;
+  }
+
+  var match = ALL_DATA.find(function(d) { return d.zip === zip; });
+
+  if (!match) {
+    resultDiv.innerHTML = '<div class="zip-result-wrap"><p class="zip-not-found">ZIP code ' + zip + ' was not included in the demographic analysis. It may be outside LA County, may have very few inspection records, or may lack sufficient Census demographic data for reliable results. See Limitations, Limitation 8 for details.</p></div>';
+    clearBtn.style.display = "inline-block";
+    return;
+  }
+
+  var declineVal = match.decline <= 0
+    ? "-" + Math.abs(match.decline).toFixed(1) + "%"
+    : "+" + match.decline.toFixed(1) + "%";
+  var declineClass = match.decline <= -100 ? " severe" : "";
+  var changeLabel = match.decline <= 0 ? "Inspection Decline" : "Inspection Increase";
+  var incomeText = "$" + Math.round(match.income / 1000) + "K";
+  var rentText = match.rent_burden.toFixed(1) + "%";
+
+  resultDiv.innerHTML =
+    '<div class="zip-result-wrap"><div class="zip-result-card">' +
+      '<div class="zip-result-zip">ZIP ' + zip + '</div>' +
+      '<div class="zip-result-stats">' +
+        '<div class="zip-stat">' +
+          '<div class="zip-stat-val' + declineClass + '">' + declineVal + '</div>' +
+          '<div class="zip-stat-label">' + changeLabel + '</div>' +
+          '<div class="zip-stat-period">2023 to 2025</div>' +
+        '</div>' +
+        '<div class="zip-stat">' +
+          '<div class="zip-stat-val">' + incomeText + '</div>' +
+          '<div class="zip-stat-label">Median Household Income</div>' +
+          '<div class="zip-stat-period">Census estimate, 2020 to 2024</div>' +
+        '</div>' +
+        '<div class="zip-stat">' +
+          '<div class="zip-stat-val">' + rentText + '</div>' +
+          '<div class="zip-stat-label">Renters Stretched by Housing Costs</div>' +
+          '<div class="zip-stat-period">Census estimate, 2020 to 2024</div>' +
+        '</div>' +
+      '</div>' +
+    '</div></div>';
+
+  clearBtn.style.display = "inline-block";
+  currentHighlight = zip;
+
+  var activeTab = document.querySelector(".tab.active");
+  var viewKey = activeTab.getAttribute("onclick").match(/'(.*?)'/)[1];
+  buildChart(viewKey, zip);
+}
+
+function clearZip() {
+  document.getElementById("zipInput").value = "";
+  document.getElementById("zipResult").innerHTML = "";
+  document.getElementById("zipClear").style.display = "none";
+  currentHighlight = null;
+  var activeTab = document.querySelector(".tab.active");
+  var viewKey = activeTab.getAttribute("onclick").match(/'(.*?)'/)[1];
+  buildChart(viewKey, null);
+}
+
+document.getElementById("zipInput").addEventListener("keydown", function(e) {
+  if (e.key === "Enter") searchZip();
+});
+
+// Build hypothetical chart
+new Chart(document.getElementById("hypotheticalChart").getContext("2d"), {
+  type: "scatter",
+  data: {
+    datasets: [
+      {
+        data: [{x:30,y:10},{x:40,y:-5},{x:50,y:-25},{x:60,y:-45},{x:70,y:-60},{x:80,y:-75},{x:90,y:-88},{x:100,y:-95}],
+        pointBackgroundColor: NAVY+"BB", pointRadius: 5
+      },
+      {
+        data: [{x:30,y:15},{x:100,y:-90}],
+        type: "line", borderColor: "#9DA3AE", borderWidth: 1.5, borderDash: [4,4], pointRadius: 0, fill: false
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+    scales: {
+      x: { title: { display: true, text: "Income →", color: "#9DA3AE", font: { size: 10 } }, ticks: { display: false }, grid: { color: "rgba(0,0,0,0.04)" }, border: { display: false } },
+      y: { title: { display: true, text: "Inspection change ↓", color: "#9DA3AE", font: { size: 10 } }, ticks: { display: false }, grid: { color: "rgba(0,0,0,0.04)" }, border: { display: false } }
+    },
+    layout: { padding: 8 }
+  }
+});
+
+// Build actual mini chart
+new Chart(document.getElementById("actualChart").getContext("2d"), {
+  type: "scatter",
+  data: {
+    datasets: [
+      {
+        data: [{x:30,y:-90},{x:40,y:-60},{x:45,y:-95},{x:50,y:-85},{x:55,y:20},{x:60,y:-100},{x:65,y:-40},{x:70,y:-95},{x:75,y:50},{x:80,y:-80},{x:85,y:-90},{x:90,y:-70},{x:95,y:-95},{x:65,y:-100},{x:55,y:-100},{x:75,y:-100},{x:80,y:10},{x:70,y:-100}],
+        pointBackgroundColor: NAVY+"BB", pointRadius: 5
+      },
+      {
+        data: [{x:30,y:-78},{x:100,y:-82}],
+        type: "line", borderColor: "#9DA3AE", borderWidth: 1.5, borderDash: [4,4], pointRadius: 0, fill: false
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+    scales: {
+      x: { title: { display: true, text: "Income →", color: "#9DA3AE", font: { size: 10 } }, ticks: { display: false }, grid: { color: "rgba(0,0,0,0.04)" }, border: { display: false } },
+      y: { title: { display: true, text: "Inspection change ↓", color: "#9DA3AE", font: { size: 10 } }, ticks: { display: false }, grid: { color: "rgba(0,0,0,0.04)" }, border: { display: false } }
+    },
+    layout: { padding: 8 }
+  }
+});
+
+// Initialize main chart
+buildLegend(VIEWS.income);
+buildChart("income", null);
+</script>
+</body>
+</html>

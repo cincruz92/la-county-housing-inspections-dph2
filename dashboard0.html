@@ -1,0 +1,1380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LA County Housing Inspections and Violations - Dashboard 0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --navy: #2E4A7A;
+    --navy-light: #EEF2F8;
+    --orange: #E8873A;
+    --accent: #2E4A7A;
+    --accent-light: #EEF2F8;
+    --white: #FFFFFF;
+    --gray-50: #F7F8FA;
+    --gray-100: #F0F2F6;
+    --gray-200: #EAECF0;
+    --gray-400: #9DA3AE;
+    --gray-600: #6B7280;
+    --gray-700: #374151;
+    --gray-900: #111827;
+    --font-display: 'Source Serif 4', serif;
+    --font-body: 'IBM Plex Sans', sans-serif;
+    --radius: 12px;
+    --shadow: 0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.05);
+  }
+
+  body {
+    font-family: var(--font-body);
+    font-size: 15px;
+    background: var(--gray-100);
+    color: var(--gray-900);
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  .db-header { background: transparent; max-width: 1200px; margin: 0 auto; padding: 32px 40px 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .db-label {
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #9DA3AE;
+    margin-bottom: 6px;
+  }
+  .db-title {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--navy);
+    line-height: 1.25;
+  }
+  .db-badge {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.22);
+    color: rgba(255,255,255,0.8);
+    font-size: 12px;
+    padding: 5px 14px;
+    border-radius: 20px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  /* BODY */
+  .db-body {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 40px 60px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  /* SECTION CARDS */
+  .section-card {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .section-header {
+    background: var(--navy-light);
+    border-bottom: 1px solid var(--gray-200);
+    padding: 16px 28px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-header:empty { display: none; }
+  .section-number {
+    width: 28px;
+    height: 28px;
+    background: var(--navy);
+    color: var(--white);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .section-title {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--navy);
+  }
+  .section-body {
+    padding: 24px 28px;
+  }
+
+  /* PROSE */
+  .prose {
+    font-size: 15px;
+    color: var(--gray-700);
+    line-height: 1.75;
+  }
+  .prose p + p {
+    margin-top: 12px;
+  }
+  .prose strong {
+    color: var(--navy);
+    font-weight: 600;
+  }
+
+  /* CALLOUT */
+  .callout {
+    background: var(--navy-light);
+    border-left: 4px solid var(--navy);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 14px 18px;
+    margin-top: 16px;
+  }
+  .callout-title {
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--navy);
+    display: inline;
+  }
+  .callout-body {
+    font-size: 13px;
+    color: var(--gray-600);
+    line-height: 1.6;
+    margin-top: 4px;
+  }
+
+  /* CHAIN */
+  .chain {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-wrap: wrap;
+    margin: 16px 0;
+  }
+  .chain-item {
+    background: var(--navy);
+    color: var(--white);
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.3;
+    text-align: center;
+    min-width: 160px;
+  }
+  .chain-item small {
+    display: block;
+    font-size: 10px;
+    font-weight: 400;
+    opacity: 0.7;
+    margin-top: 2px;
+    letter-spacing: 0.03em;
+  }
+  .chain-arrow {
+    color: var(--navy);
+    font-size: 20px;
+    padding: 0 6px;
+    font-weight: 300;
+  }
+
+  /* TERMS GRID */
+  .terms-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    margin-top: 4px;
+  }
+  .term-card {
+    background: #F7F8FA;
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .term-acronym {
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--navy);
+    margin-bottom: 2px;
+  }
+  .term-full {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--accent);
+    margin-bottom: 6px;
+    line-height: 1.3;
+  }
+  .term-def {
+    font-size: 12px;
+    color: var(--gray-600);
+    line-height: 1.55;
+  }
+
+  /* AGENCIES TABLE */
+  .agency-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 4px;
+  }
+  .agency-row {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 16px;
+    align-items: start;
+    padding: 14px 16px;
+    background: #F7F8FA;
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+  }
+  .agency-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--navy);
+    line-height: 1.4;
+  }
+  .agency-abbr {
+    font-size: 11px;
+    color: var(--gray-400);
+    font-weight: 400;
+    margin-top: 1px;
+  }
+  .agency-role {
+    font-size: 13px;
+    color: var(--gray-700);
+    line-height: 1.55;
+  }
+
+  /* DATA NUMBERS */
+  .numbers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+    margin-top: 4px;
+  }
+  .number-card {
+    background: #F7F8FA;
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+  }
+  .number-card.hero {
+    background: var(--navy);
+    border-color: var(--navy);
+    padding: 20px 16px;
+  }
+  .number-card.hero .number-value {
+    font-size: 36px;
+    color: var(--white);
+  }
+  .number-card.hero .number-label {
+    color: rgba(255,255,255,0.75);
+  }
+  .number-value {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--navy);
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .number-label {
+    font-size: 12px;
+    color: var(--gray-600);
+    line-height: 1.4;
+  }
+
+  /* GAPS LIST */
+  .gaps-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .gap-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #F7F8FA;
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+  }
+  .gap-item.primary {
+    background: var(--accent-light);
+    border-color: #B8D4F0;
+    border-left: 4px solid var(--accent);
+  }
+  .gap-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    margin-top: 5px;
+    flex-shrink: 0;
+  }
+  .gap-item.primary .gap-dot {
+    width: 10px;
+    height: 10px;
+    margin-top: 4px;
+  }
+  .gap-text {
+    font-size: 14px;
+    color: var(--gray-700);
+    line-height: 1.55;
+  }
+  .gap-text strong {
+    color: var(--navy);
+    font-weight: 600;
+  }
+  .gap-priority {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 3px;
+  }
+
+  /* NAV GRID */
+  .nav-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    margin-top: 4px;
+  }
+  .nav-card {
+    background: #F7F8FA;
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    padding: 14px 16px;
+    text-decoration: none;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .nav-card:hover {
+    background: var(--navy-light);
+    border-color: var(--navy);
+  }
+  .nav-card-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .nav-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--navy);
+    margin-bottom: 4px;
+    line-height: 1.3;
+  }
+  .nav-card-desc {
+    font-size: 12px;
+    color: var(--gray-600);
+    line-height: 1.5;
+  }
+
+  
+  
+  
+  .section-card.alt {
+    background: var(--navy-light);
+    border-color: #D0D5DD;
+  }
+  .section-card.alt .section-header {
+    background: #DDE6F2;
+    border-bottom-color: #D0D5DD;
+  }
+  .section-card.alt .term-card-new {
+    background: var(--white);
+  }
+  .section-card.alt .accordion-item {
+    background: var(--white);
+    border-color: #D0D5DD;
+  }
+  .section-card.alt .accordion-trigger:hover {
+    background: #DDE6F2;
+  }
+  .section-card.alt .accordion-item.open .accordion-trigger { transition: background 0.15s; }
+  .accordion-trigger:hover { background: var(--navy-light); }
+  .accordion-trigger-old {
+    background: #DDE6F2;
+  }
+
+  /* ACCORDION */
+  .accordion-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .accordion-item {
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--white);
+    transition: box-shadow 0.15s;
+  }
+  .accordion-item:hover {
+    box-shadow: 0 2px 12px rgba(46,74,122,0.08);
+  }
+  .accordion-trigger { transition: background 0.15s; }
+  .accordion-trigger:hover { background: var(--navy-light); }
+  .accordion-trigger-old {
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s;
+  }
+  .accordion-trigger:hover {
+    background: var(--navy-light);
+  }
+  .accordion-item.open .accordion-trigger { transition: background 0.15s; }
+  .accordion-trigger:hover { background: var(--navy-light); }
+  .accordion-trigger-old {
+    background: var(--navy-light);
+    border-bottom: 1px solid var(--gray-200);
+  }
+  .accordion-cat {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 20px;
+    flex-shrink: 0;
+  }
+  .acc-agency      { background: #E8F0FB; color: #2E4A7A; }
+  .acc-program     { background: #E0F5F3; color: #157A72; }
+  .acc-inspection  { background: #E6F4EA; color: #2D6A4F; }
+  .acc-legal       { background: #F3EEF8; color: #6B3FA0; }
+  .acc-jurisdiction { background: #F0F4F8; color: #374151; }
+  .acc-badge { font-size: 8.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; }
+  .accordion-term-name {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--navy);
+    flex: 1;
+  }
+  .accordion-term-full {
+    font-size: 12px;
+    color: var(--gray-600);
+    font-weight: 400;
+    margin-left: 6px;
+  }
+  .accordion-preview {
+    font-size: 12px;
+    color: var(--gray-400);
+    flex: 2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .accordion-chevron-wrap {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--gray-200);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.15s, transform 0.2s ease;
+  }
+  .accordion-item.open .accordion-chevron-wrap {
+    background: var(--navy);
+    transform: rotate(180deg);
+  }
+  .accordion-chevron {
+    width: 16px;
+    height: 16px;
+    color: var(--gray-700);
+    flex-shrink: 0;
+  }
+  .accordion-item.open .accordion-chevron {
+    color: var(--white);
+  }
+  .accordion-body {
+    display: none;
+    padding: 16px 18px;
+    background: var(--white);
+  }
+  .accordion-item.open .accordion-body {
+    display: block;
+  }
+  .accordion-def {
+    font-size: 13px;
+    color: var(--gray-700);
+    line-height: 1.7;
+    margin-bottom: 12px;
+  }
+  .accordion-source {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--navy);
+    font-weight: 500;
+    text-decoration: none;
+    border: 1px solid var(--gray-200);
+    padding: 4px 10px;
+    border-radius: 20px;
+    transition: background 0.15s;
+  }
+  .accordion-source:hover {
+    background: var(--navy-light);
+  }
+  .legend-hint {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--gray-400);
+    margin-bottom: 16px;
+  }
+
+  /* CATEGORY TAGS */
+  .cat-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-bottom: 8px;
+  }
+  .cat-agency    { background: #E8F0FB; color: #2E4A7A; }
+  .cat-program   { background: var(--accent-light); color: #1E5A96; }
+  .cat-inspection { background: #E6F4EA; color: #2D6A4F; }
+  .cat-legal     { background: #F3EEF8; color: #6B3FA0; }
+  .cat-metric    { background: #F0F4F8; color: #374151; }
+
+  /* REDESIGNED TERM CARDS */
+  .terms-grid-new {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+    margin-top: 4px;
+  }
+  .term-card-new {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    transition: box-shadow 0.15s;
+  }
+  .term-card-new:hover {
+    box-shadow: 0 4px 16px rgba(46,74,122,0.10);
+  }
+  .term-acronym-new {
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--navy);
+    margin-bottom: 2px;
+  }
+  .term-full-new {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--gray-600);
+    margin-bottom: 8px;
+    line-height: 1.3;
+  }
+  .term-def-new {
+    font-size: 12px;
+    color: var(--gray-700);
+    line-height: 1.6;
+    flex: 1;
+  }
+
+
+
+  /* AGENCY HIERARCHY */
+  .agency-section-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gray-400);
+    margin: 20px 0 10px;
+  }
+  .agency-section-label:first-child { margin-top: 0; }
+
+  /* COUNTY HIERARCHY TREE */
+  .hierarchy-tree {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .hierarchy-level {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+  }
+  .hierarchy-indent {
+    width: 32px;
+    flex-shrink: 0;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .hierarchy-indent::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--gray-200);
+  }
+  .hierarchy-indent::after {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    width: 14px;
+    height: 2px;
+    background: var(--gray-200);
+  }
+  .hierarchy-indent.last::before {
+    height: 50%;
+    bottom: auto;
+  }
+  .hierarchy-node {
+    flex: 1;
+    margin: 4px 0;
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .hierarchy-node.root {
+    background: var(--navy);
+    border-color: var(--navy);
+  }
+  .hierarchy-node.root .agency-node-name { color: var(--white); }
+  .hierarchy-node.root .agency-node-abbr { color: rgba(255,255,255,0.6); }
+  .hierarchy-node.root .agency-node-role { color: rgba(255,255,255,0.8); }
+  .hierarchy-node.mid {
+    background: var(--navy-light);
+    border-color: #D0D5DD;
+  }
+  .hierarchy-node.leaf {
+    background: var(--white);
+    border-left: 3px solid var(--accent);
+  }
+  .agency-node-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--navy);
+    line-height: 1.3;
+    margin-bottom: 1px;
+  }
+  .agency-node-abbr {
+    font-size: 10px;
+    color: var(--gray-400);
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    margin-bottom: 4px;
+  }
+  .agency-node-role {
+    font-size: 11px;
+    color: var(--gray-600);
+    line-height: 1.5;
+  }
+  .node-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 20px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .badge-source { background: var(--accent-light); color: #1E5A96; }
+  .badge-new { background: #E6F4EA; color: #2D6A4F; }
+
+  /* CITY AGENCIES */
+  .city-agency-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .city-agency-card {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    padding: 14px 16px;
+    border-top: 3px solid #6B3FA0;
+  }
+  .city-agency-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--navy);
+    margin-bottom: 2px;
+  }
+  .city-agency-abbr {
+    font-size: 10px;
+    color: var(--gray-400);
+    margin-bottom: 8px;
+  }
+  .city-agency-role {
+    font-size: 12px;
+    color: var(--gray-700);
+    line-height: 1.55;
+  }
+
+  /* POLICY TIMELINE */
+  .timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-top: 12px;
+    position: relative;
+    padding-left: 24px;
+  }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 6px;
+    bottom: 6px;
+    width: 2px;
+    background: var(--gray-200);
+  }
+  .timeline-item {
+    position: relative;
+    padding-bottom: 20px;
+  }
+  .timeline-item:last-child {
+    padding-bottom: 0;
+  }
+  .timeline-dot {
+    position: absolute;
+    left: -20px;
+    top: 4px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--navy);
+    border: 2px solid var(--white);
+    box-shadow: 0 0 0 2px var(--navy);
+  }
+  .timeline-date {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+  .timeline-event {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--navy);
+    margin-bottom: 2px;
+  }
+  .timeline-detail {
+    font-size: 13px;
+    color: var(--gray-600);
+    line-height: 1.5;
+  }
+
+  /* FOOTER */
+  .db-footer {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 40px 32px;
+    font-size: 12px;
+    color: var(--gray-400);
+    line-height: 1.6;
+    border-top: 1px solid var(--gray-200);
+    padding-top: 20px;
+  }
+
+  /* style match: lookup-tool research-card treatment (hairline, no shadow) */
+  .section-card{box-shadow:0 1px 3px rgba(16,24,40,0.08), 0 1px 2px rgba(16,24,40,0.06);border:1px solid #D0D5DD;border-radius:4px;}
+
+  /* compact jump-to pill bar */
+  #sticky-nav a:hover{background:var(--navy-light) !important;}
+
+
+  /* TIMELINE GAP (Option A revamp) */
+  .timeline-dot.origin { background: var(--white); }
+  .timeline-gap { position: relative; margin: 2px 0 24px; padding: 0; }
+  .timeline-gap::before { content: ''; position: absolute; left: -19px; top: -8px; bottom: -8px; width: 2px; background: repeating-linear-gradient(to bottom, var(--gray-400) 0 5px, transparent 5px 10px); }
+  .timeline-gap-inner { background: var(--navy-light); border-left: 3px solid var(--navy); border-radius: 0 4px 4px 0; padding: 13px 16px; }
+  .timeline-gap-big { font-family: var(--font-display); font-size: 24px; font-weight: 600; color: var(--navy); line-height: 1.1; }
+  .timeline-gap-text { font-size: 12.5px; color: var(--gray-700); line-height: 1.6; margin-top: 5px; }
+
+  /* ===== Mobile (added June 2026): no effect above 700px ===== */
+  @media (max-width: 700px) {
+    .db-body { padding: 24px 16px 40px; }
+    .agency-row { grid-template-columns: 1fr; gap: 8px; }
+    .city-agency-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<!-- PORTFOLIO NAVIGATION -->
+<div style="background:#1E3560;padding:12px 40px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+  <a href="index.html" style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);text-decoration:none;white-space:nowrap;letter-spacing:0.06em;text-transform:uppercase;display:flex;align-items:center;gap:6px;">&#8592; Portfolio Home</a>
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <a href="dashboard0.html" style="font-size:12px;font-weight:600;color:#ffffff;background:rgba(255,255,255,0.22);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.5);">Start Here</a>
+    <a href="dashboard1.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">The Decline</a>
+    <a href="dashboard2.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Violations by Area</a>
+    <a href="dashboard3.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Property Types</a>
+    <a href="dashboard6.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Look Up a Property</a>
+    <a href="dashboard4.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Equity</a>
+    <a href="methods.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Methods</a>
+    <a href="dashboard5.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Limitations</a>
+  </div>
+</div>
+
+
+<div class="db-header">
+  <div>
+    <p class="db-label">Start Here</p>
+    <h1 class="db-title">Who Inspects What and Why</h1>
+  </div>
+  
+</div>
+
+<!-- JUMP TO NAV (compact) -->
+<div style="max-width:1200px;margin:0 auto;padding:0 40px 20px;">
+  <div id="sticky-nav" style="position:sticky;top:12px;z-index:100;display:inline-flex;align-items:center;gap:4px;background:#FFFFFF;border:0.5px solid #D0D5DD;border-radius:24px;padding:6px 8px 6px 16px;box-shadow:0 1px 3px rgba(16,24,40,0.08), 0 1px 2px rgba(16,24,40,0.06);">
+    <span style="font-size:12px;color:#6B7280;font-weight:500;white-space:nowrap;margin-right:2px;">Jump to:</span>
+    <a href="#section-3" style="font-size:12px;font-weight:500;color:#2E4A7A;text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:18px;transition:background 0.15s;">Timeline</a>
+    <a href="#section-4" style="font-size:12px;font-weight:500;color:#2E4A7A;text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:18px;transition:background 0.15s;">Key Terms</a>
+    <a href="#section-5" style="font-size:12px;font-weight:500;color:#2E4A7A;text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:18px;transition:background 0.15s;">Agencies</a>
+  </div>
+</div>
+
+<div class="db-body">
+
+
+  <!-- SECTION 3: TIMELINE -->
+  <div class="section-card alt" id="section-3">
+    <div class="section-header">
+      <h2 class="section-title">Timeline</h2>
+    </div>
+    <div class="section-body">
+      <p style="font-size:13px;color:var(--gray-600);line-height:1.7;margin-bottom:24px;">The institutional history of housing inspection oversight in LA County, from the 1960s contracts through the close of the study period.</p>
+
+      <!-- POLICY TIMELINE (Option A revamp, June 2026) -->
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-dot origin"></div>
+          <div class="timeline-date">1960<span style="text-transform:lowercase;">s</span></div>
+          <div class="timeline-event">City public health contracts executed</div>
+          <div class="timeline-detail">LA County signs public health services contracts with incorporated cities, placing housing inspections under County authority through the Department of Public Health. Many of these contracts are never updated after their original execution.</div>
+        </div>
+        <div class="timeline-gap">
+          <div class="timeline-gap-inner">
+            <div class="timeline-gap-big">Six decades pass.</div>
+            <div class="timeline-gap-text">The contracts stay in force unchanged. When the California Legislature reorganizes the Health and Safety Code in 1991, the contracts are left citing superseded law. Throughout, DIB conducts routine inspections of apartment buildings with five or more units, and at no point in these sixty years does any version of the contracts require an inspection schedule for incorporated cities.</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-date">Jan 2023</div>
+          <div class="timeline-event">Dataset begins</div>
+          <div class="timeline-detail">This analysis captures DIB routine inspection activity beginning January 1, 2023, across 85 incorporated cities and a small number of unincorporated area records. Of 48,085 unique inspections, 237 are from unincorporated areas, representing less than 1% of all records.</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-date">Apr 2024</div>
+          <div class="timeline-event">RHHP Ordinance adopted by unanimous vote of the LA County Board of Supervisors</div>
+          <div class="timeline-detail">The Rental Housing Habitability Program was created for unincorporated LA County areas, mandating routine inspections every four years. Incorporated cities remain outside RHHP scope. DIB continues to operate in incorporated cities without a mandated inspection frequency.</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-date">Oct 2024</div>
+          <div class="timeline-event">85-City Public Health Contracts updated, the first update in roughly 60 years</div>
+          <div class="timeline-detail">LA County DPH executed updated public health services contracts with 85 incorporated cities. The contracts modernized legal language and statutory references. No mandated inspection frequency was added for incorporated cities. <a href="data/source-context/2024-85-City-Contracts-Board-Letter.pdf" target="_blank" rel="noopener noreferrer" style="color:var(--accent,#2E4A7A);">Source: Board letter, October 8, 2024 (PDF)</a></div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-date">Nov 2024</div>
+          <div class="timeline-event">RHHP launches in unincorporated areas</div>
+          <div class="timeline-detail">The new inspection program became operational, covering unincorporated communities including East LA, Altadena, Lennox, and Florence-Firestone. Incorporated cities remain under DIB jurisdiction.</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-date">Jan 2025</div>
+          <div class="timeline-event">SB 1465 and AB 548 take effect</div>
+          <div class="timeline-detail">SB 1465 expands public agency enforcement tools for substandard housing. AB 548 requires inspectors to examine neighboring units when substandard conditions are identified. Both laws apply to DIB inspections.</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-date">Sep 2025</div>
+          <div class="timeline-event">Dataset ends</div>
+          <div class="timeline-detail">An 82% decline in DIB inspections is documented from the January 2023 baseline, with the violation rate rising from 32% to 42%. The cause of the decline cannot be determined from the available data alone; whether budget reductions, staffing changes, or program restructuring were responsible remains unknown.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<!-- SECTION 4: KEY TERMS -->
+  <div class="section-card" id="section-4">
+    <div class="section-header">
+      <h2 class="section-title">Key Terms and Definitions</h2>
+    </div>
+    <div class="section-body">
+
+      <p style="font-size:12px;color:var(--gray-400);margin-bottom:24px;">Click any term to expand its definition and official source. Terms are grouped by type.</p>
+
+      <!-- JURISDICTION -->
+      <p style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:var(--navy);border-bottom:1.5px solid var(--navy);padding-bottom:6px;margin-bottom:12px;">Jurisdiction</p>
+      <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:24px;">
+
+        <div class="accordion-item" id="acc-incorporated" data-acc-item="acc-incorporated">
+          <button class="accordion-trigger" style="width:100%;display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--white);border:0.5px solid var(--gray-200);border-radius:8px;cursor:pointer;text-align:left;">
+            <span class="acc-badge acc-jurisdiction">JURISDICTION</span><span style="font-size:13px;font-weight:600;color:var(--navy);min-width:80px;">Incorporated</span>
+            <span style="font-size:13px;font-weight:500;color:var(--navy);flex:1;">Incorporated City</span>
+            <span style="font-size:11px;color:var(--gray-400);margin-right:8px;">Has own city government</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--gray-400);"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="accordion-body" style="display:none;padding:14px 16px;background:var(--gray-50);border:0.5px solid var(--gray-200);border-top:none;border-radius:0 0 8px 8px;">
+            <p style="font-size:12px;color:var(--gray-600);line-height:1.7;margin-bottom:10px;">A city that has its own elected city council and city government, formally established as a municipal corporation. LA County has 88 incorporated cities. Three, Long Beach, Pasadena, and Vernon, run their own municipal health departments and are not part of DIB's contract cities. The other 85 contract with LA County DPH for public health services, including DIB's routine housing inspections.</p>
+            <a href="data/source-context/88-Cities-Incorporation-and-Population.pdf" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:var(--accent,#2E4A7A);">Source: County of Los Angeles, 88 Cities, Incorporation and Population (PDF)</a>
+          </div>
+        </div>
+
+        <div class="accordion-item" id="acc-unincorporated" data-acc-item="acc-unincorporated">
+          <button class="accordion-trigger" style="width:100%;display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--white);border:0.5px solid var(--gray-200);border-radius:8px;cursor:pointer;text-align:left;">
+            <span class="acc-badge acc-jurisdiction">JURISDICTION</span><span style="font-size:13px;font-weight:600;color:var(--navy);min-width:80px;">Unincorporated</span>
+            <span style="font-size:13px;font-weight:500;color:var(--navy);flex:1;">Unincorporated Area</span>
+            <span style="font-size:11px;color:var(--gray-400);margin-right:8px;">Governed directly by the County</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--gray-400);"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="accordion-body" style="display:none;padding:14px 16px;background:var(--gray-50);border:0.5px solid var(--gray-200);border-top:none;border-radius:0 0 8px 8px;">
+            <p style="font-size:12px;color:var(--gray-600);line-height:1.7;margin-bottom:10px;">A community that is not part of any incorporated city. More than 65% of LA County's land area and roughly one million residents fall within unincorporated areas, where the County itself, not a city government, provides municipal services and the Board of Supervisors functions as the local city council. RHHP's four-year mandated inspection cycle applies only to unincorporated areas. Incorporated cities, where DIB has no mandated inspection frequency, are not covered by RHHP.</p>
+            <a href="data/source-context/Unincorporated-Areas.pdf" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:var(--accent,#2E4A7A);">Source: County of Los Angeles, Unincorporated Areas (PDF)</a>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- AGENCIES -->
+      <p style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:var(--navy);border-bottom:1.5px solid var(--navy);padding-bottom:6px;margin-bottom:12px;">Agencies</p>
+      <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:24px;">
+
+        <div class="accordion-item" id="acc-dib" data-acc-item="acc-dib">
+          <button class="accordion-trigger" style="width:100%;display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--white);border:0.5px solid var(--gray-200);border-radius:8px;cursor:pointer;text-align:left;">
+            <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;background:#E8F0FB;color:#2E4A7A;padding:2px 7px;border-radius:4px;flex-shrink:0;">DIB</span>
+            <span style="font-size:13px;font-weight:500;color:var(--navy);flex:1;">District Inspection Branch</span>
+            <span style="font-size:11px;color:var(--gray-400);margin-right:8px;">Data source</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--gray-400);"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="accordion-body" style="display:none;padding:14px 16px;background:var(--gray-50);border:0.5px solid var(--gray-200);border-top:none;border-radius:0 0 8px 8px;">
+            <p style="font-size:12px;color:var(--gray-600);line-height:1.7;margin-bottom:10px;">The District Inspection Branch is the unit within LA County's Environmental Health Division that ensures residential housing countywide is, in the County's words, <strong style="color:#2E4A7A;font-weight:600;">“safe, sanitary, and fit for human habitation.”</strong> According to the County, DIB inspects roughly 60,000 apartment buildings of five or more units plus about 12,000 associated swimming pools and spas, in cities that have adopted the County Health Code, and responds to complaints at smaller properties. All 48,085 inspection records in this dataset were collected by DIB.</p>
+            <a href="http://publichealth.lacounty.gov/eh/inspection/housing-inspection.htm" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:var(--accent,#2E4A7A);display:inline-flex;align-items:center;gap:4px;">Source: DIB Housing Inspections page</a>
+          </div>
+        </div>
+
+        <div class="accordion-item" id="acc-dph" data-acc-item="acc-dph">
+          <button class="accordion-trigger" style="width:100%;display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--white);border:0.5px solid var(--gray-200);border-radius:8px;cursor:pointer;text-align:left;">
+            <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;background:#E8F0FB;color:#2E4A7A;padding:2px 7px;border-radius:4px;flex-shrink:0;">DPH</span>
+            <span style="font-size:13px;font-weight:500;color:var(--navy);flex:1;">LA County Department of Public Health</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--gray-400);"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="accordion-body" style="display:none;padding:14px 16px;background:var(--gray-50);border:0.5px solid var(--gray-200);border-top:none;border-radius:0 0 8px 8px;">
+            <p style="font-size:12px;color:var(--gray-600);line-height:1.7;margin-bottom:10px;">The LA County Department of Public Health is the county agency responsible for protecting and improving the health of all LA County residents. DPH oversees the Environmental Health Division, which the County describes as “responsible for the enforcement and education of Federal, State, and local laws and regulations relating to environmental factors which affect public health and safety.” The division comprises five branches, including District Inspection, plus two support units. DPH administers public health services contracts with 85 incorporated cities across LA County.</p>
+            <a href="http://www.publichealth.lacounty.gov/eh/about/environmental-health.htm" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:var(--accent,#2E4A7A);display:inline-flex;align-items:center;gap:4px;">Source: Environmental Health Division</a>
+          </div>
+        </div>
+
+        <div class="accordion-item" id="acc-lahd" data-acc-item="acc-lahd">
+          <button class="accordion-trigger" style="width:100%;display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--white);border:0.5px solid var(--gray-200);border-radius:8px;cursor:pointer;text-align:left;">
+            <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;background:#E8F0FB;color:#2E4A7A;padding:2px 7px;border-radius:4px;flex-shrink:0;">LAHD</span>
+            <span style="font-size:13px;font-weight:500;color:var(--navy);flex:1;">Los Angeles Housing Department</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--gray-400);"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="accordion-body" style="display:none;padding:14px 16px;background:var(--gray-50);border:0.5px solid var(--gray-200);border-top:none;border-radius:0 0 8px 8px;">
+            <p style="font-size:12px;color:var(--gray-600);line-height:1.7;margin-bottom:10px;">The Los Angeles Housing Department is a City of LA agency, separate from LA County DPH, that oversees housing policy, rent stabilization, and tenant protections within city limits. <strong style="color:#2E4A7A;font-weight:600;">LAHD administers the Systematic Code Enforcement Program</strong> and enforces the Los Angeles Housing Code.</p>
+            <a href="https://housing.lacity.gov/about-us/who-we-are" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:var(--accent,#2E4A7A);display:inline-flex;align-items:center;gap:4px;">Source: LAHD, Who We Are</a>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- PROGRAMS -->
+      <p style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:var(--navy);border-bottom:1.5px solid var(--navy);padding-bottom:6px;margin-bottom:12px;">Programs</p>
+      <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:24px;">
+
+        <div class="accordion-item" id="acc-rhhp" data-acc-item="acc-rhhp">
+          <button class="accordion-trigger" style="width:100%;display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--white);border:0.5px solid var(--gray-200);border-radius:8px;cursor:pointer;text-align:left;">
+            <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;background:#E0F5F3;color:#157A72;padding:2px 7px;border-radius:4px;flex-shrink:0;">RHHP</span>
+            <span style="font-size:13px;font-weight:500;color:var(--navy);flex:1;">Rental Housing Habitability Program</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--gray-400);"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="accordion-body" style="display:none;padding:14px 16px;background:var(--gray-50);border:0.5px solid var(--gray-200);border-top:none;border-radius:0 0 8px 8px;">
+            <p style="font-size:12px;color:var(--gray-600);line-height:1.7;margin-bottom:10px;">Created by LA County Ordinance 2024-0020, adopted unanimously by the Board of Supervisors on April 23, 2024, effective October 23, 2024, with inspections beginning November 2024. RHHP mandates routine housing inspections every four years in unincorporated LA County areas only. Incorporated cities remain under DIB jurisdiction. RHHP activity is not reflected in this dataset.</p>
+            <a href="http://www.publichealth.lacounty.gov/eh/about/rental-housing-habitability-program.htm" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:var(--accent,#2E4A7A);display:inline-flex;align-items:center;gap:4px;">Source: RHHP program page</a>
+            <a href="data/source-context/RHHP-Flyer.pdf" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:var(--accent,#2E4A7A);display:inline-flex;align-items:center;gap:4px;margin-top:4px;">Source: Official RHHP flyer (PDF)</a>
+          </div>
+        </div>
+
+        <div class="accordion-item" id="acc-scep" data-acc-item="acc-scep">
+          <button class="accordion-trigger" style="width:100%;display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--white);border:0.5px solid var(--gray-200);border-radius:8px;cursor:pointer;text-align:left;">
+            <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;background:#E0F5F3;color:#157A72;padding:2px 7px;border-radius:4px;flex-shrink:0;">SCEP</span>
+            <span style="font-size:13px;font-weight:500;color:var(--navy);flex:1;">Systematic Code Enforcement Program</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--gray-400);"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="accordion-body" style="display:none;padding:14px 16px;background:var(--gray-50);border:0.5px solid var(--gray-200);border-top:none;border-radius:0 0 8px 8px;">
+            <p style="font-size:12px;color:var(--gray-600);line-height:1.7;margin-bottom:10px;">The City of LA's proactive inspection program for rental housing, administered by LAHD. SCEP inspects all rental properties with two or more units in the City of LA at least once every four years, enforcing the Los Angeles Housing Code. <strong style="color:#157A72;font-weight:600;">SCEP activity is not included in this dataset</strong>, which reflects DIB inspections only.</p>
+            <a href="https://housing.lacity.gov/rental-property-owners/inspections-and-fees" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:var(--accent,#2E4A7A);display:inline-flex;align-items:center;gap:4px;">Source: LA Housing Department, Inspections and Fees</a>
+            <a href="data/source-context/SCEP-Program-Brochure.pdf" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:var(--accent,#2E4A7A);display:inline-flex;align-items:center;gap:4px;margin-top:4px;">Source: Official SCEP brochure (PDF)</a>
+          </div>
+        </div>
+
+        <div class="accordion-item" id="acc-hoir" data-acc-item="acc-hoir">
+          <button class="accordion-trigger" style="width:100%;display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--white);border:0.5px solid var(--gray-200);border-radius:8px;cursor:pointer;text-align:left;">
+            <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;background:#E0F5F3;color:#157A72;padding:2px 7px;border-radius:4px;flex-shrink:0;">HOIR</span>
+            <span style="font-size:13px;font-weight:500;color:var(--navy);flex:1;">Housing Official Inspection Report</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--gray-400);"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="accordion-body" style="display:none;padding:14px 16px;background:var(--gray-50);border:0.5px solid var(--gray-200);border-top:none;border-radius:0 0 8px 8px;">
+            <p style="font-size:12px;color:var(--gray-600);line-height:1.7;margin-bottom:10px;">The Housing Inspection Guide defines the HOIR as “the notice issued by the Department to property owners.” Completed by a DIB Environmental Health Specialist, it records each violation, its severity classification, the applicable code sections, and required corrective actions, along with which units were inspected or unavailable. The RHHP program in unincorporated areas uses a similar report called the RHOIR.</p>
+            <a href="http://www.publichealth.lacounty.gov/eh/docs/inspection/housing-inspection-guide.pdf" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:var(--accent,#2E4A7A);display:inline-flex;align-items:center;gap:4px;">Source: Housing Inspection Guide (PDF)</a>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- INSPECTION TYPES -->
+      <p style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:var(--navy);border-bottom:1.5px solid var(--navy);padding-bottom:6px;margin-bottom:12px;">Inspection Types and Metrics</p>
+      <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:24px;">
+
+        <div class="accordion-item" id="acc-routine" data-acc-item="acc-routine">
+          <button class="accordion-trigger" style="width:100%;display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--white);border:0.5px solid var(--gray-200);border-radius:8px;cursor:pointer;text-align:left;">
+            <span class="acc-badge acc-inspection">INSPECTION</span><span style="font-size:13px;font-weight:600;color:var(--navy);min-width:80px;">Routine</span>
+            <span style="font-size:13px;font-weight:500;color:var(--navy);flex:1;">Routine Inspection</span>
+            <span style="font-size:11px;color:var(--gray-400);margin-right:8px;">Periodic, unannounced</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--gray-400);"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="accordion-body" style="display:none;padding:14px 16px;background:var(--gray-50);border:0.5px solid var(--gray-200);border-top:none;border-radius:0 0 8px 8px;">
+            <p style="font-size:12px;color:var(--gray-600);line-height:1.7;margin-bottom:10px;">The Housing Inspection Guide defines a routine inspection as “a periodic, unannounced inspection to determine compliance with all applicable federal, state, and local statutes, orders, ordinances, quarantines, rules, regulations, or directives related to the public health.” All 48,085 records in this dataset are routine inspections, conducted regardless of whether anyone filed a complaint. Unlike SCEP inspections in the City of LA, which come with 30 days written notice, DIB routine inspections are unannounced.</p>
+            <a href="http://www.publichealth.lacounty.gov/eh/docs/inspection/housing-inspection-guide.pdf" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:var(--accent,#2E4A7A);">Source: Housing Inspection Guide (PDF)</a>
+          </div>
+        </div>
+
+        <div class="accordion-item" id="acc-complaint" data-acc-item="acc-complaint">
+          <button class="accordion-trigger" style="width:100%;display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--white);border:0.5px solid var(--gray-200);border-radius:8px;cursor:pointer;text-align:left;">
+            <span class="acc-badge acc-inspection">INSPECTION</span><span style="font-size:13px;font-weight:600;color:var(--navy);min-width:80px;">Complaint</span>
+            <span style="font-size:13px;font-weight:500;color:var(--navy);flex:1;">Complaint Inspection</span>
+            <span style="font-size:11px;color:var(--gray-400);margin-right:8px;">Reactive, tenant-initiated</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--gray-400);"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="accordion-body" style="display:none;padding:14px 16px;background:var(--gray-50);border:0.5px solid var(--gray-200);border-top:none;border-radius:0 0 8px 8px;">
+            <p style="font-size:12px;color:var(--gray-600);line-height:1.7;margin-bottom:10px;">A reactive visit triggered when a tenant, neighbor, or other party reports a housing problem to DIB. The source file identifies inspection type in its service description field; every record in this extract is marked Routine, so complaint inspections are absent from this analysis despite appearing in the dataset’s name.</p>
+            <a href="http://www.publichealth.lacounty.gov/eh/docs/inspection/housing-inspection-guide.pdf" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:var(--accent,#2E4A7A);">Source: Housing Inspection Guide (PDF)</a>
+          </div>
+        </div>
+
+        <div class="accordion-item" id="acc-10pct" data-acc-item="acc-10pct">
+          <button class="accordion-trigger" style="width:100%;display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--white);border:0.5px solid var(--gray-200);border-radius:8px;cursor:pointer;text-align:left;">
+            <span class="acc-badge acc-inspection">INSPECTION</span><span style="font-size:13px;font-weight:600;color:var(--navy);min-width:80px;">10% Rule</span>
+            <span style="font-size:13px;font-weight:500;color:var(--navy);flex:1;">10% Unit Rule</span>
+            <span style="font-size:11px;color:var(--gray-400);margin-right:8px;">Large building threshold</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--gray-400);"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="accordion-body" style="display:none;padding:14px 16px;background:var(--gray-50);border:0.5px solid var(--gray-200);border-top:none;border-radius:0 0 8px 8px;">
+            <p style="font-size:12px;color:var(--gray-600);line-height:1.7;margin-bottom:10px;">For properties with 60 or more units, DIB inspectors are required to attempt inspection of at least 10% of units per visit. In a 100-unit building, as few as 10 units may be entered and assessed. This means violation counts in large buildings reflect sampled conditions rather than a complete survey of the property.</p>
+            <a href="http://www.publichealth.lacounty.gov/eh/docs/inspection/housing-inspection-guide.pdf" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:var(--accent,#2E4A7A);">Source: Housing Inspection Guide (PDF)</a>
+          </div>
+        </div>
+
+              </div>
+
+      <!-- LEGAL -->
+      <p style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:var(--navy);border-bottom:1.5px solid var(--navy);padding-bottom:6px;margin-bottom:12px;">Legal Standards</p>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+
+        <div class="accordion-item" id="acc-critical" data-acc-item="acc-critical">
+          <button class="accordion-trigger" style="width:100%;display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--white);border:0.5px solid var(--gray-200);border-radius:8px;cursor:pointer;text-align:left;">
+            <span class="acc-badge acc-legal">LEGAL</span><span style="font-size:13px;font-weight:600;color:var(--navy);min-width:80px;">Critical</span>
+            <span style="font-size:13px;font-weight:500;color:var(--navy);flex:1;">Critical Violation</span>
+            <span style="font-size:11px;color:var(--gray-400);margin-right:8px;">Immediate public health threat</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--gray-400);"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="accordion-body" style="display:none;padding:14px 16px;background:var(--gray-50);border:0.5px solid var(--gray-200);border-top:none;border-radius:0 0 8px 8px;">
+            <p style="font-size:12px;color:var(--gray-600);line-height:1.7;margin-bottom:10px;">A condition that poses a direct and immediate threat to the health and safety of occupants. Examples include vermin found inside a dwelling unit, no hot water, or inoperable smoke detectors. Critical violations require prompt corrective action. They represent 6% of violations in this dataset.</p>
+            <a href="http://www.publichealth.lacounty.gov/eh/docs/inspection/housing-inspection-guide.pdf" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:var(--accent,#2E4A7A);">Source: Housing Inspection Guide (PDF)</a>
+          </div>
+        </div>
+
+        <div class="accordion-item" id="acc-noncritical" data-acc-item="acc-noncritical">
+          <button class="accordion-trigger" style="width:100%;display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--white);border:0.5px solid var(--gray-200);border-radius:8px;cursor:pointer;text-align:left;">
+            <span class="acc-badge acc-legal">LEGAL</span><span style="font-size:13px;font-weight:600;color:var(--navy);min-width:80px;">Non-Critical</span>
+            <span style="font-size:13px;font-weight:500;color:var(--navy);flex:1;">Non-Critical Violation</span>
+            <span style="font-size:11px;color:var(--gray-400);margin-right:8px;">Habitability deficiency</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--gray-400);"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="accordion-body" style="display:none;padding:14px 16px;background:var(--gray-50);border:0.5px solid var(--gray-200);border-top:none;border-radius:0 0 8px 8px;">
+            <p style="font-size:12px;color:var(--gray-600);line-height:1.7;margin-bottom:10px;">A condition that affects habitability and living conditions but does not pose an immediate danger to occupants. Examples include holes or water damage to walls, missing window screens, or inadequate lighting in common areas. Non-critical violations represent 94% of violations in this dataset.</p>
+            <a href="http://www.publichealth.lacounty.gov/eh/docs/inspection/housing-inspection-guide.pdf" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:var(--accent,#2E4A7A);">Source: Housing Inspection Guide (PDF)</a>
+          </div>
+        </div>
+
+        <div class="accordion-item" id="acc-title11" data-acc-item="acc-title11">
+          <button class="accordion-trigger" style="width:100%;display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--white);border:0.5px solid var(--gray-200);border-radius:8px;cursor:pointer;text-align:left;">
+            <span class="acc-badge acc-legal">LEGAL</span><span style="font-size:13px;font-weight:600;color:var(--navy);min-width:80px;">Title 11</span>
+            <span style="font-size:13px;font-weight:500;color:var(--navy);flex:1;">LA County Code Title 11</span>
+            <span style="font-size:11px;color:var(--gray-400);margin-right:8px;">Legal authority for DIB</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--gray-400);"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="accordion-body" style="display:none;padding:14px 16px;background:var(--gray-50);border:0.5px solid var(--gray-200);border-top:none;border-radius:0 0 8px 8px;">
+            <p style="font-size:12px;color:var(--gray-600);line-height:1.7;margin-bottom:10px;">The section of the Los Angeles County Code that governs health and safety standards for residential housing. It defines what constitutes a violation, how violations are classified, and what corrective actions are required. DIB enforces Title 11 within incorporated cities that have adopted the County Health Code by ordinance or resolution; not all contracted cities have adopted the housing provisions, and the County’s DIB page notes that Glendale and Torrance have not.</p>
+            <a href="https://library.municode.com/ca/los_angeles_county/codes/code_of_ordinances?nodeId=TIT11HESA" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:var(--accent,#2E4A7A);">Source: LA County Code, Title 11 (Municode)</a>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+<!-- SECTION 5: AGENCIES -->
+  <div class="section-card alt" id="section-5">
+    <div class="section-header">
+      <h2 class="section-title">Agencies and Responsibilities</h2>
+    </div>
+    <div class="section-body">
+
+      <p style="font-size:13px;color:var(--gray-600);line-height:1.7;margin-bottom:24px;">Multiple agencies oversee housing in LA County. Each operates under different legal authority, covers different jurisdictions, and applies a different lens to the same problem.</p>
+
+      <!-- TWO COLUMN ORG CHART -->
+      <div style="display:grid;grid-template-columns:1fr 48px 1fr;gap:0;margin-bottom:28px;">
+
+        <!-- COUNTY COLUMN -->
+        <div>
+          <p style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:var(--gray-400);margin-bottom:12px;">County - Public Health Authority</p>
+
+          <!-- DPH -->
+          <div style="background:var(--navy);border-radius:var(--radius);padding:16px 18px;margin-bottom:8px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+              <p style="font-size:13px;font-weight:600;color:var(--white);">LA County Dept. of Public Health</p>
+            </div>
+            <p style="font-size:10px;color:rgba(255,255,255,0.5);margin-bottom:8px;">DPH &middot; County agency</p>
+            <p style="font-size:11px;color:rgba(255,255,255,0.8);line-height:1.6;">Oversees all public health services across LA County. Administers contracts with 85 incorporated cities.</p>
+          </div>
+
+          <!-- Connector -->
+          <div style="display:flex;align-items:flex-start;gap:0;margin-bottom:8px;">
+            <div style="width:24px;margin-left:16px;border-left:1.5px dashed var(--gray-400);border-bottom:1.5px dashed var(--gray-400);height:20px;border-radius:0 0 0 4px;margin-top:-8px;flex-shrink:0;"></div>
+            <!-- EH Division -->
+            <div style="flex:1;background:var(--white);border:0.5px solid var(--gray-200);border-left:3px solid #4A6FA5;border-radius:0 var(--radius) var(--radius) 0;padding:12px 14px;">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4A6FA5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+                <p style="font-size:12px;font-weight:600;color:var(--navy);">Environmental Health Division</p>
+              </div>
+              <p style="font-size:10px;color:var(--gray-400);margin-bottom:6px;">EH &middot; Division of DPH</p>
+              <p style="font-size:11px;color:var(--gray-600);line-height:1.5;">Enforces health and safety codes within contracted cities. Houses the District Inspection Branch.</p>
+            </div>
+          </div>
+
+          <!-- Connector to DIB -->
+          <div style="display:flex;align-items:flex-start;gap:0;margin-bottom:8px;">
+            <div style="width:40px;margin-left:32px;border-left:1.5px dashed var(--gray-400);border-bottom:1.5px dashed var(--gray-400);height:20px;border-radius:0 0 0 4px;margin-top:-8px;flex-shrink:0;"></div>
+            <!-- DIB -->
+            <div style="flex:1;background:#EEF2F8;border:0.5px solid #B8D4F0;border-left:3px solid #2E4A7A;border-radius:0 var(--radius) var(--radius) 0;padding:12px 14px;">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px;">
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2E4A7A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                  <p style="font-size:12px;font-weight:600;color:#1E5A96;">District Inspection Branch</p>
+                </div>
+                <span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;background:var(--navy);color:var(--white);padding:2px 6px;border-radius:4px;white-space:nowrap;margin-left:6px;">Data source</span>
+              </div>
+              <p style="font-size:10px;color:#2E4A7A;margin-bottom:6px;">DIB &middot; Branch of EH</p>
+              <p style="font-size:11px;color:#2E6FAA;line-height:1.5;">Routine inspections of 5+ unit buildings across 85 incorporated cities. No mandated frequency. Source of all data in this project.</p>
+            </div>
+          </div>
+
+          <!-- Connector to RHHP -->
+          <div style="display:flex;align-items:flex-start;gap:0;">
+            <div style="width:24px;margin-left:16px;border-left:1.5px dashed var(--gray-400);border-bottom:1.5px dashed var(--gray-400);height:20px;border-radius:0 0 0 4px;margin-top:-8px;flex-shrink:0;"></div>
+            <!-- RHHP -->
+            <div style="flex:1;background:var(--white);border:0.5px solid var(--gray-200);border-left:3px solid var(--gray-400);border-radius:0 var(--radius) var(--radius) 0;padding:12px 14px;">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px;">
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gray-400)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                  <p style="font-size:12px;font-weight:600;color:var(--navy);">Rental Housing Habitability Program</p>
+                </div>
+                <span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;background:var(--navy-light);color:var(--navy);padding:2px 6px;border-radius:4px;white-space:nowrap;margin-left:6px;">New 2024</span>
+              </div>
+              <p style="font-size:10px;color:var(--gray-400);margin-bottom:6px;">RHHP &middot; Under DPH directly &middot; Unincorporated areas only</p>
+              <p style="font-size:11px;color:var(--gray-600);line-height:1.5;">Launched November 2024. Mandates inspections every four years in unincorporated LA County only. Does not cover incorporated cities.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- VS DIVIDER -->
+        <div style="display:flex;flex-direction:column;align-items:center;padding-top:40px;">
+          <div style="width:1px;flex:1;background:var(--gray-200);"></div>
+          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.1em;padding:8px 0;writing-mode:vertical-rl;">vs</div>
+          <div style="width:1px;flex:1;background:var(--gray-200);"></div>
+        </div>
+
+        <!-- CITY COLUMN -->
+        <div>
+          <p style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:var(--gray-400);margin-bottom:12px;">City of LA - Housing Authority</p>
+
+          <!-- LAHD -->
+          <div style="background:#1E3560;border-radius:var(--radius);padding:16px 18px;margin-bottom:8px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+              <p style="font-size:13px;font-weight:600;color:var(--white);">Los Angeles Housing Department</p>
+            </div>
+            <p style="font-size:10px;color:rgba(255,255,255,0.5);margin-bottom:8px;">LAHD &middot; City of LA agency</p>
+            <p style="font-size:11px;color:rgba(255,255,255,0.8);line-height:1.6;">Entirely separate from LA County DPH. Oversees housing policy, rent stabilization, and tenant protections. Administers SCEP.</p>
+          </div>
+
+          <!-- Connector to SCEP -->
+          <div style="display:flex;align-items:flex-start;gap:0;">
+            <div style="width:24px;margin-left:16px;border-left:1.5px dashed var(--gray-400);border-bottom:1.5px dashed var(--gray-400);height:20px;border-radius:0 0 0 4px;margin-top:-8px;flex-shrink:0;"></div>
+            <!-- SCEP -->
+            <div style="flex:1;background:var(--white);border:0.5px solid var(--gray-200);border-left:3px solid var(--gray-400);border-radius:0 var(--radius) var(--radius) 0;padding:12px 14px;">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gray-400)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                <p style="font-size:12px;font-weight:600;color:var(--navy);">Systematic Code Enforcement Program</p>
+              </div>
+              <p style="font-size:10px;color:var(--gray-400);margin-bottom:6px;">SCEP &middot; Under LAHD &middot; City of LA only</p>
+              <p style="font-size:11px;color:var(--gray-600);line-height:1.5;">Inspects 2+ unit buildings in City of LA at least once every four years. Enforces the Los Angeles Housing Code. Not in this dataset.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- OVERLAP INSIGHT AT BOTTOM -->
+      <div style="border-left:4px solid var(--navy);padding:16px 20px;background:var(--navy-light);border-radius:0 var(--radius) var(--radius) 0;">
+        <p style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--gray-400);margin-bottom:10px;">Where they overlap: City of LA neighborhoods</p>
+        <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin-bottom:12px;">
+          <div style="background:var(--white);border-radius:8px;padding:10px 14px;">
+            <p style="font-size:12px;font-weight:600;color:#2E4A7A;margin-bottom:3px;">DIB inspects</p>
+            <p style="font-size:11px;color:var(--gray-600);line-height:1.5;">5 or more unit buildings &middot; County public health law &middot; <strong style="color:#2E4A7A;font-weight:600;">No mandated frequency</strong></p>
+          </div>
+          <div style="text-align:center;font-size:12px;font-weight:500;color:var(--gray-400);">+</div>
+          <div style="background:var(--white);border-radius:8px;padding:10px 14px;">
+            <p style="font-size:12px;font-weight:600;color:#157A72;margin-bottom:3px;">SCEP inspects</p>
+            <p style="font-size:11px;color:var(--gray-600);line-height:1.5;">2 or more unit buildings &middot; City housing code &middot; <strong style="color:#157A72;font-weight:600;">Every 4 years mandated</strong></p>
+          </div>
+        </div>
+        <p style="font-size:12px;color:var(--gray-600);line-height:1.7;">Both programs inspect properties in City of LA neighborhoods simultaneously but under different legal authority and enforced by different types of inspectors. DIB inspectors are Environmental Health Specialists enforcing county public health law. SCEP inspectors are city housing code officers enforcing the Los Angeles Municipal Code. <strong style="color:var(--navy);font-weight:500;">They are not substitutes for each other. When DIB inspections decline, tenants lose county-level public health oversight even where city housing inspections continue.</strong></p>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- end db-body -->
+
+<div style="max-width:1200px; margin:0 auto; padding:20px 40px 32px; font-size:12px; color:var(--gray-400); line-height:1.6; border-top:1px solid var(--gray-200);">
+  Source: LA County Open Data Portal · Data accessed February 2026 · Routine inspections only · Long Beach is absent from the source data · Pasadena, Vernon, and South Pasadena appear as published · Census data via Census Reporter (ACS B19013, B25070, B03002)
+</div>
+
+
+
+
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+
+  // ACCORDION - event delegation on document
+  document.addEventListener("click", function(e) {
+    var trigger = e.target.closest(".accordion-trigger");
+    if (!trigger) return;
+    var item = trigger.closest(".accordion-item");
+    if (!item) return;
+    // Toggle only the clicked item; others stay as they are
+    var body = item.querySelector(".accordion-body");
+    if (item.classList.contains("open")) {
+      item.classList.remove("open");
+      if (body) body.style.display = "none";
+    } else {
+      item.classList.add("open");
+      if (body) body.style.display = "block";
+    }
+  });
+
+  // FILTER - event delegation
+  document.addEventListener("click", function(e) {
+    var btn = e.target.closest("[data-filter]");
+    if (!btn) return;
+    var cat = btn.getAttribute("data-filter");
+    // Update active state
+    document.querySelectorAll("[data-filter]").forEach(function(b) {
+      b.classList.remove("active");
+    });
+    btn.classList.add("active");
+    // Show/hide items
+    document.querySelectorAll(".accordion-item").forEach(function(item) {
+      if (cat === "all") {
+        item.style.display = "";
+      } else {
+        var catEl = item.querySelector(".accordion-cat");
+        if (catEl && catEl.classList.contains("acc-" + cat)) {
+          item.style.display = "";
+        } else {
+          item.style.display = "none";
+          item.classList.remove("open");
+          var body = item.querySelector(".accordion-body");
+          if (body) body.style.display = "none";
+        }
+      }
+    });
+  });
+
+  // Open first accordion by default
+  var first = document.querySelector(".accordion-item");
+  if (first) {
+    first.classList.add("open");
+    var body = first.querySelector(".accordion-body");
+    if (body) body.style.display = "block";
+  }
+
+  // Set All filter as active by default
+  var allBtn = document.querySelector("[data-filter='all']");
+  if (allBtn) allBtn.classList.add("active");
+
+});
+</script>
+
+<div style="max-width:1200px;margin:0 auto;padding:0 40px 40px;">
+  <div style="border-top:0.5px solid #D8DCE3;padding-top:14px;display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px;">
+    <p style="font-size:12px;color:#6B7280;margin:0;"><strong style="color:#374151;font-weight:600;">Cindy Cruz</strong> &middot; 2026</p>
+    <p style="font-size:12px;margin:0;"><a href="https://www.linkedin.com/in/cindy-c-85b312114/" target="_blank" rel="noopener" style="color:#2E4A7A;text-decoration:none;border-bottom:1px solid #D8DCE3;">LinkedIn</a><span style="color:#9DA3AE;margin:0 8px;">&middot;</span><a href="https://github.com/ccruz92" target="_blank" rel="noopener" style="color:#2E4A7A;text-decoration:none;border-bottom:1px solid #D8DCE3;">GitHub</a></p>
+  </div>
+</div>
+
+</body>
+</html>

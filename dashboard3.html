@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Which Properties Are Inspected and What Do Inspectors Find - Property Types</title>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@300;400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; outline: none !important; }
+  :root {
+    --navy: #2E4A7A; --navy-mid: #4A6FA5; --navy-light: #EEF2F8;
+    --orange: #E8873A;
+    --accent: #2E4A7A;
+    --accent-light: #EEF2F8; --white: #FFFFFF;
+    --gray-50: #F7F8FA; --gray-100: #F0F2F6; --gray-200: #EAECF0; --gray-300: #D8DCE3; --gray-400: #9DA3AE;
+    --gray-600: #6B7280; --gray-700: #374151; --gray-900: #111827;
+    --font-display: "Source Serif 4", serif; --font-body: "IBM Plex Sans", sans-serif;
+    --radius: 12px; --shadow: 0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.05);
+  }
+  html, body { font-family: var(--font-body); font-size: 15px; background: var(--gray-100); color: var(--gray-900); min-height: 100vh; }
+
+  .db-header { background: transparent; max-width: 1200px; margin: 0 auto; padding: 32px 40px 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .db-label { font-size: 11px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: #9DA3AE; margin-bottom: 6px; }
+  .db-title { font-family: var(--font-display); font-size: 26px; font-weight: 600; color: var(--navy); line-height: 1.25; }
+  .db-badge { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22); color: rgba(255,255,255,0.8); font-size: 12px; padding: 5px 14px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; pointer-events: none; user-select: none; }
+
+  .db-body { max-width: 1200px; margin: 0 auto; padding: 30px 40px 20px; }
+  .db-footer { max-width: 1200px; margin: 0 auto; padding: 16px 40px 40px; display: flex; justify-content: space-between; align-items: center; }
+  .footer-source, .footer-note { font-size: 11px; color: var(--gray-400); }
+  .footer-note { font-style: italic; }
+
+  .card { background: var(--white); border-radius: 4px; box-shadow:0 1px 3px rgba(16,24,40,0.08), 0 1px 2px rgba(16,24,40,0.06); border:1px solid #D0D5DD; padding: 26px 28px; margin-bottom: 20px; }
+  .card-title { font-family: var(--font-display); font-size: 22px; font-weight: 600; color: var(--navy); margin-bottom: 6px; }
+  .card-sub { font-size: 13px; color: var(--gray-400); margin-bottom: 20px; }
+
+  .callout { border-left: 4px solid var(--navy); padding: 14px 20px; margin-bottom: 20px; background: var(--navy-light); border-radius: 0 var(--radius) var(--radius) 0; display: flex; align-items: center; gap: 20px; }
+  .callout-text { flex: 1; font-size: 13px; color: var(--gray-900); line-height: 1.6; }
+  .callout-text strong { color: var(--navy); font-weight: 500; }
+
+  /* STAT CARDS */
+  .stat-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .stat-card { background: var(--gray-50); border-radius: 4px; border: 0.5px solid var(--gray-300); padding: 20px 18px; }
+  .stat-card.faded { opacity: 0.6; }
+  .stat-card-icon { width: 36px; height: 36px; background: var(--navy-light); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+  .stat-card-icon svg { width: 20px; height: 20px; stroke: var(--navy); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  .stat-card.faded .stat-card-icon { background: var(--gray-200); }
+  .stat-card.faded .stat-card-icon svg { stroke: var(--gray-400); }
+  .stat-pct { font-family: var(--font-display); font-size: 40px; font-weight: 600; color: var(--navy); line-height: 1; margin-bottom: 4px; }
+  .stat-card.faded .stat-pct { color: var(--gray-400); }
+  .stat-name { font-size: 14px; font-weight: 500; color: var(--gray-700); margin-bottom: 4px; }
+  .stat-count { font-size: 12px; color: var(--gray-400); margin-bottom: 12px; }
+  .stat-desc { font-size: 12px; color: var(--gray-700); line-height: 1.6; border-top: 0.5px solid var(--gray-200); padding-top: 12px; margin-bottom: 10px; }
+  .stat-sub-list { display: flex; flex-direction: column; gap: 4px; }
+  .stat-sub-item { font-size: 11px; color: var(--gray-400); display: flex; justify-content: space-between; align-items: center; }
+  .stat-sub-bar { height: 5px; background: var(--navy-light); border-radius: 2px; margin-top: 3px; margin-bottom: 6px; overflow: hidden; }
+  .stat-sub-fill { height: 100%; background: var(--navy); border-radius: 2px; }
+
+  /* VIOLATION RANKED LIST */
+  .rank-list { display: flex; flex-direction: column; gap: 14px; }
+  .rank-row { display: flex; align-items: center; gap: 12px; }
+  .rank-num { font-size: 11px; color: var(--gray-400); width: 18px; text-align: right; flex-shrink: 0; }
+  .rank-icon { width: 34px; height: 34px; flex-shrink: 0; }
+  .rank-icon svg { width: 34px; height: 34px; display: block; overflow: visible; }
+  .rank-text { width: 210px; flex-shrink: 0; }
+  .rank-ratio { font-size: 11px; font-weight: 500; color: var(--gray-400); line-height: 1.2; margin-bottom: 2px; }
+  .rank-name { font-size: 12px; font-weight: 600; color: var(--gray-900); line-height: 1.3; }
+  .rank-bar-wrap { flex: 1; height: 8px; background: var(--gray-200); border-radius: 4px; overflow: hidden; }
+  .rank-bar { height: 100%; border-radius: 4px; background: var(--navy); }
+  .rank-count { font-size: 12px; font-weight: 500; color: var(--navy); width: 40px; text-align: right; flex-shrink: 0; }
+
+
+  /* WHAT THIS SUGGESTS (Layout D) */
+  .impl-card { background: var(--navy-light); border: 1px solid #D0D5DD; border-left: 4px solid var(--navy); border-radius: 4px; box-shadow: 0 1px 3px rgba(16,24,40,0.08), 0 1px 2px rgba(16,24,40,0.06); padding: 32px 36px; margin-bottom: 20px; width: 100%; }
+  .impl-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gray-600); margin-bottom: 16px; }
+  .impl-lede { font-size: 16px; font-weight: 600; color: var(--navy); line-height: 1.55; margin-bottom: 18px; }
+  .impl-p { font-size: 13.5px; color: var(--gray-900); line-height: 1.7; margin-bottom: 18px; }
+  .impl-p strong { color: var(--navy); font-weight: 600; }
+  .impl-zone { background: var(--white); border-radius: 8px; padding: 18px 20px; margin: 20px 0; }
+  .impl-zone-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gray-600); margin-bottom: 12px; }
+  .impl-law-row { display: grid; grid-template-columns: 130px 1fr; gap: 14px; font-size: 13px; line-height: 1.6; color: var(--gray-900); padding: 10px 0; border-bottom: 0.5px solid var(--gray-200); }
+  .impl-law-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .impl-law-row:first-child { padding-top: 0; }
+  .impl-law-date { font-weight: 500; color: var(--gray-600); font-size: 11px; }
+  .impl-law-text strong { font-weight: 500; color: var(--gray-900); }
+  .impl-law-text a { color: var(--navy); text-decoration: underline; text-decoration-color: rgba(46,74,122,0.3); text-underline-offset: 2px; transition: text-decoration-color 0.15s ease; }
+  .impl-law-text a:hover { text-decoration-color: var(--navy); }
+  .impl-synth { font-family: var(--font-display); font-size: 17px; font-weight: 600; color: var(--navy); line-height: 1.5; padding: 16px 18px; background: rgba(255,255,255,0.55); border-radius: 8px; margin: 4px 0 18px; }
+  .impl-note { font-size: 12.5px; color: var(--gray-600); line-height: 1.65; margin-bottom: 12px; }
+  .impl-note:last-of-type { margin-bottom: 0; }
+  .impl-q-zone { background: #1E5A96; border-radius: 10px; padding: 20px 22px; margin: 22px 0 16px; }
+  .impl-q-zone-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(255,255,255,0.6); margin-bottom: 12px; }
+  .impl-q-item { font-size: 15px; font-weight: 500; color: var(--white); line-height: 1.5; margin-bottom: 10px; }
+  .impl-q-item:last-child { margin-bottom: 0; }
+  .impl-audience { display: flex; align-items: flex-start; gap: 10px; background: var(--white); border-radius: 8px; padding: 14px 16px; font-size: 12px; color: var(--gray-700); line-height: 1.6; }
+  .impl-audience-icon { width: 22px; height: 22px; border-radius: 50%; background: var(--navy-light); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--navy); font-weight: 600; }
+  .impl-audience-body { display: flex; flex-direction: column; gap: 4px; }
+  .impl-audience-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gray-400); }
+
+  /* ===== Mobile (added June 2026): no effect above 700px ===== */
+  @media (max-width: 700px) {
+    .db-header { padding: 24px 16px 0; }
+    .db-title { font-size: 21px; }
+    .db-body { padding: 22px 16px 16px; }
+    .stat-cards { grid-template-columns: 1fr; gap: 10px; }
+    .impl-law-row { grid-template-columns: 1fr; }
+    .db-footer { flex-direction: column; align-items: flex-start; gap: 6px; padding: 14px 16px 28px; }
+  }
+</style>
+</head>
+<body>
+<!-- PORTFOLIO NAVIGATION -->
+<div style="background:#1E3560;padding:12px 40px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+  <a href="index.html" style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);text-decoration:none;white-space:nowrap;letter-spacing:0.06em;text-transform:uppercase;display:flex;align-items:center;gap:6px;">&#8592; Portfolio Home</a>
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <a href="dashboard0.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Start Here</a>
+    <a href="dashboard1.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">The Decline</a>
+    <a href="dashboard2.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Violations by Area</a>
+    <a href="dashboard3.html" style="font-size:12px;font-weight:600;color:#ffffff;background:rgba(255,255,255,0.22);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.5);">Property Types</a>
+    <a href="dashboard6.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Look Up a Property</a>
+    <a href="dashboard4.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Equity</a>
+    <a href="methods.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Methods</a>
+    <a href="dashboard5.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Limitations</a>
+  </div>
+</div>
+
+<div class="db-header">
+  <div>
+    <p class="db-label">Property Types</p>
+    <h1 class="db-title">Which Properties Are Inspected and What Do Inspectors Find</h1>
+  </div>
+  
+</div>
+
+<div class="db-body">
+
+  <!-- CALLOUT -->
+  <div class="callout">
+    <p class="callout-text">The vast majority of inspections were conducted at <strong>multi-family dwellings</strong>, including apartment buildings and residential properties ranging from small 5-unit walk-ups to large complexes with 100 or more units. Hotels account for most of the remainder, with a small number of SRO, residential hotel, and general housing inspections. This reflects the composition of LA County’s rental housing stock subject to routine Environmental Health inspection.</p>
+  </div>
+
+  <!-- PROPERTY TYPE STAT CARDS -->
+  <div class="card">
+    <h2 class="card-title">Property Type Breakdown</h2>
+    <p class="card-sub">48,085 total inspections. Within each category, percentages show the breakdown by building size.</p>
+    <div class="stat-cards">
+
+      <div class="stat-card">
+        <div class="stat-card-icon">
+          <svg viewBox="0 0 20 20"><rect x="2" y="8" width="16" height="11" rx="1"/><path d="M2 8 L10 2 L18 8"/><rect x="7" y="13" width="6" height="6"/><line x1="10" y1="13" x2="10" y2="19"/></svg>
+        </div>
+        <div class="stat-pct">92%</div>
+        <div class="stat-name">Multi-Family Dwellings</div>
+        <div class="stat-count">44,310 inspections</div>
+        <div class="stat-desc">Apartment buildings and residential properties with 5 or more units, ranging from small walk-ups to large complexes with 100+ units.</div>
+        <div class="stat-sub-list">
+          <div class="stat-sub-item"><span>5-20 units</span><span>82.8%</span></div>
+          <div class="stat-sub-bar"><div class="stat-sub-fill" style="width:82.8%"></div></div>
+          <div class="stat-sub-item"><span>21-100 units</span><span>15.3%</span></div>
+          <div class="stat-sub-bar"><div class="stat-sub-fill" style="width:15.3%"></div></div>
+          <div class="stat-sub-item"><span>101+ units</span><span>1.9%</span></div>
+          <div class="stat-sub-bar"><div class="stat-sub-fill" style="width:1.9%"></div></div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-card-icon">
+          <svg viewBox="0 0 20 20"><rect x="3" y="2" width="14" height="17" rx="1"/><rect x="5" y="5" width="3" height="3" rx="0.5"/><rect x="12" y="5" width="3" height="3" rx="0.5"/><rect x="5" y="10" width="3" height="3" rx="0.5"/><rect x="12" y="10" width="3" height="3" rx="0.5"/><rect x="7" y="14" width="6" height="5" rx="0.5"/><line x1="10" y1="14" x2="10" y2="19"/></svg>
+        </div>
+        <div class="stat-pct">8%</div>
+        <div class="stat-name">Hotels</div>
+        <div class="stat-count">3,764 inspections</div>
+        <div class="stat-desc">Short-term and long-term lodging facilities with 6 or more rooms, from budget properties to larger hotels.</div>
+        <div class="stat-sub-list">
+          <div class="stat-sub-item"><span>6-50 rooms</span><span>62.1%</span></div>
+          <div class="stat-sub-bar"><div class="stat-sub-fill" style="width:62.1%"></div></div>
+          <div class="stat-sub-item"><span>51-100 rooms</span><span>15.9%</span></div>
+          <div class="stat-sub-bar"><div class="stat-sub-fill" style="width:15.9%"></div></div>
+          <div class="stat-sub-item"><span>101+ rooms</span><span>22.0%</span></div>
+          <div class="stat-sub-bar"><div class="stat-sub-fill" style="width:22.0%"></div></div>
+        </div>
+      </div>
+
+      <div class="stat-card faded">
+        <div class="stat-card-icon">
+          <svg viewBox="0 0 20 20" style="stroke:#9DA3AE;"><rect x="3" y="6" width="14" height="13" rx="1"/><path d="M3 6 L10 2 L17 6"/><rect x="7" y="12" width="4" height="7"/><line x1="6" y1="9" x2="8" y2="9"/><line x1="12" y1="9" x2="14" y2="9"/></svg>
+        </div>
+        <div class="stat-pct">&lt;1%</div>
+        <div class="stat-name">SRO and General Housing</div>
+        <div class="stat-count">11 inspections</div>
+        <div class="stat-desc">Shown as the source labels them: SRO and residential hotels (8 inspections) and general housing (3 inspections). Both are included in the dataset totals but are too few to break out as their own property-type category.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CONNECTING CALLOUT -->
+  <div style="border-left:4px solid var(--navy);padding:12px 18px;margin-bottom:20px;background:var(--navy-light);border-radius:0 var(--radius) var(--radius) 0;">
+    <p style="font-size:13px;color:var(--gray-600);line-height:1.6;"><strong style="color:var(--navy);">What are these properties failing?</strong> The most common violations involve the parts of a building that tenants share every day: hallways, stairwells, common areas, and trash areas. Peeling paint, damaged walls and ceilings, broken screens, and debris are the conditions inspectors found most often. These are not sudden failures. They are the kinds of problems that build up over time in buildings that are not being regularly maintained.</p>
+  </div>
+
+  <!-- VIOLATIONS RANKED LIST -->
+  <div class="card">
+    <h2 class="card-title">More Than 1 in 4 Violations Involve Damage to Walls, Ceilings, and Floors</h2>
+    <p style="font-size:13px;color:var(--gray-600);line-height:1.6;margin-bottom:12px;">The following violations were found across the 16,279 inspections that recorded at least one violation.</p>
+    <p style="font-size:12px;color:var(--gray-400);margin-bottom:12px;">Showing the 10 most frequent violation types, which together account for 61.1% of all 37,026 violation records.</p>
+    <p style="font-size:12px;color:var(--gray-400);margin-bottom:12px;">Wall, ceiling, and floor categories combined account for 26.8% of all violations.</p>
+
+    <div class="rank-list">
+
+      <div class="rank-row">
+        <span class="rank-num">1</span>
+        <span class="rank-icon"><svg viewBox="0 0 34 34" fill="none" stroke="#2E4A7A" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="26" height="26" rx="2" stroke="#2E4A7A" stroke-width="1.5"/><path d="M4 13 Q11 10 17 15 Q23 20 30 17" stroke="#2E4A7A" stroke-width="1.5" fill="none" stroke-dasharray="2.5 1.5"/><path d="M4 21 Q11 18 17 21 Q23 24 30 21" stroke="#2E4A7A" stroke-width="1.2" fill="none" stroke-dasharray="2.5 1.5" opacity="0.5"/></svg></span>
+        <div class="rank-text"><div class="rank-ratio">1 in every 10 violations</div><div class="rank-name">Wall/Ceiling/Floor Damage: Common Areas</div></div>
+        <div class="rank-bar-wrap"><div class="rank-bar" style="width:96%"></div></div>
+        <span class="rank-count">3,553</span>
+      </div>
+
+      <div class="rank-row">
+        <span class="rank-num">2</span>
+        <span class="rank-icon"><svg viewBox="0 0 34 34" fill="none" stroke="#2E4A7A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+  <!-- trash bag body -->
+  <path d="M11 14 Q9 28 10 30 Q17 33 24 30 Q25 28 23 14 Z" stroke="#2E4A7A" stroke-width="1.5" fill="none"/>
+  <!-- bag tie at top -->
+  <path d="M13 14 Q17 10 21 14" stroke="#2E4A7A" stroke-width="1.5" fill="none"/>
+  <!-- debris spilling out beside bag -->
+  <line x1="6" y1="24" x2="9" y2="22" stroke="#2E4A7A" stroke-width="1.2"/>
+  <line x1="5" y1="28" x2="9" y2="27" stroke="#2E4A7A" stroke-width="1.2"/>
+  <line x1="25" y1="23" x2="28" y2="21" stroke="#2E4A7A" stroke-width="1.2"/>
+  <line x1="25" y1="27" x2="29" y2="27" stroke="#2E4A7A" stroke-width="1.2"/>
+  <!-- ground line -->
+  <line x1="4" y1="31" x2="30" y2="31" stroke="#2E4A7A" stroke-width="1" opacity="0.4"/>
+</svg></span>
+        <div class="rank-text"><div class="rank-ratio">1 in every 11 violations</div><div class="rank-name">Debris or Waste: Common Areas</div></div>
+        <div class="rank-bar-wrap"><div class="rank-bar" style="width:93%"></div></div>
+        <span class="rank-count">3,464</span>
+      </div>
+
+      <div class="rank-row">
+        <span class="rank-num">3</span>
+        <span class="rank-icon"><svg viewBox="0 0 34 34" fill="none" stroke="#2E4A7A" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="9" width="22" height="16" rx="1" stroke="#2E4A7A" stroke-width="1.5"/><line x1="11" y1="12" x2="11" y2="22" stroke="#2E4A7A" stroke-width="1"/><line x1="16" y1="12" x2="16" y2="22" stroke="#2E4A7A" stroke-width="1"/><line x1="21" y1="12" x2="21" y2="22" stroke="#2E4A7A" stroke-width="1"/><line x1="6" y1="17" x2="28" y2="17" stroke="#2E4A7A" stroke-width="1"/><path d="M9 9 L9 5 M25 9 L25 5" stroke="#2E4A7A" stroke-width="1.5"/></svg></span>
+        <div class="rank-text"><div class="rank-ratio">1 in every 15 violations</div><div class="rank-name">Missing Vent Screens: Common Areas</div></div>
+        <div class="rank-bar-wrap"><div class="rank-bar" style="width:65%"></div></div>
+        <span class="rank-count">2,411</span>
+      </div>
+
+      <div class="rank-row">
+        <span class="rank-num">4</span>
+        <span class="rank-icon"><svg viewBox="0 0 34 34" fill="none" stroke="#2E4A7A" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="26" height="22" rx="1" stroke="#2E4A7A" stroke-width="1.5"/><line x1="17" y1="6" x2="17" y2="28" stroke="#2E4A7A" stroke-width="1"/><line x1="4" y1="17" x2="30" y2="17" stroke="#2E4A7A" stroke-width="1"/><circle cx="26" cy="17" r="2.5" fill="#2E4A7A"/></svg></span>
+        <div class="rank-text"><div class="rank-ratio">1 in every 16 violations</div><div class="rank-name">Window/Screen Damage: Common Areas</div></div>
+        <div class="rank-bar-wrap"><div class="rank-bar" style="width:64%"></div></div>
+        <span class="rank-count">2,387</span>
+      </div>
+
+      <div class="rank-row">
+        <span class="rank-num">5</span>
+        <span class="rank-icon"><svg viewBox="0 0 34 34" fill="none" stroke="#2E4A7A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+  <!-- wall surface -->
+  <rect x="5" y="5" width="24" height="24" rx="1" stroke="#2E4A7A" stroke-width="1.5"/>
+  <!-- paint layer on wall -->
+  <rect x="5" y="5" width="24" height="24" rx="1" fill="#EEF2F8" stroke="none"/>
+  <!-- top-left corner paint peeling away -->
+  <path d="M5 5 L5 16 Q9 12 14 8 L14 5 Z" fill="white" stroke="#2E4A7A" stroke-width="1.2"/>
+  <!-- curled paint edge -->
+  <path d="M5 16 Q7 14 10 12 Q12 10 14 8" stroke="#2E4A7A" stroke-width="1.5" fill="none"/>
+  <!-- exposed wall surface underneath -->
+  <path d="M5 5 Q8 7 11 9 Q13 11 14 8" stroke="#2E4A7A" stroke-width="1" stroke-dasharray="2 1.5" fill="none" opacity="0.6"/>
+</svg></span>
+        <div class="rank-text"><div class="rank-ratio">1 in every 16 violations</div><div class="rank-name">Peeling Paint: Common Areas</div></div>
+        <div class="rank-bar-wrap"><div class="rank-bar" style="width:62%"></div></div>
+        <span class="rank-count">2,301</span>
+      </div>
+
+      <div class="rank-row">
+        <span class="rank-num">6</span>
+        <span class="rank-icon"><svg viewBox="0 0 34 34" fill="none" stroke="#2E4A7A" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="26" height="26" rx="2" stroke="#2E4A7A" stroke-width="1.5"/><rect x="9" y="9" width="16" height="16" rx="1" stroke="#4A6FA5" stroke-width="1.2" stroke-dasharray="3 1.5"/><path d="M9 17 Q13 14 17 17 Q21 20 25 17" stroke="#2E4A7A" stroke-width="1.5" fill="none"/></svg></span>
+        <div class="rank-text"><div class="rank-ratio">1 in every 16 violations</div><div class="rank-name">Wall/Ceiling/Floor Damage: Unit Interior</div></div>
+        <div class="rank-bar-wrap"><div class="rank-bar" style="width:61%"></div></div>
+        <span class="rank-count">2,254</span>
+      </div>
+
+      <div class="rank-row">
+        <span class="rank-num">7</span>
+        <span class="rank-icon"><svg viewBox="0 0 34 34" fill="none" stroke="#2E4A7A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+  <!-- bin body -->
+  <path d="M8 16 L9 30 L25 30 L26 16 Z" stroke="#2E4A7A" stroke-width="1.5" fill="none"/>
+  <!-- bin lid open/ajar -->
+  <path d="M6 16 L28 16" stroke="#2E4A7A" stroke-width="1.5"/>
+  <path d="M10 16 L9 13 L25 13 L24 16" stroke="#2E4A7A" stroke-width="1.2"/>
+  <!-- overflow items sticking out top -->
+  <path d="M13 13 L11 8 M17 13 L17 7 M21 13 L23 9" stroke="#2E4A7A" stroke-width="1.5"/>
+  <!-- scattered items on ground -->
+  <line x1="4" y1="30" x2="7" y2="28" stroke="#2E4A7A" stroke-width="1.2"/>
+  <line x1="27" y1="28" x2="30" y2="30" stroke="#2E4A7A" stroke-width="1.2"/>
+</svg></span>
+        <div class="rank-text"><div class="rank-ratio">1 in every 18 violations</div><div class="rank-name">Refuse Area or Bins: Common Areas</div></div>
+        <div class="rank-bar-wrap"><div class="rank-bar" style="width:57%"></div></div>
+        <span class="rank-count">2,098</span>
+      </div>
+
+      <div class="rank-row">
+        <span class="rank-num">8</span>
+        <span class="rank-icon"><svg viewBox="0 0 34 34" fill="none" stroke="#2E4A7A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+  <!-- staircase steps going up left to right -->
+  <polyline points="4,30 4,24 10,24 10,18 16,18 16,12 22,12 22,6 30,6" stroke="#2E4A7A" stroke-width="1.8" fill="none"/>
+  <!-- ground line -->
+  <line x1="4" y1="30" x2="30" y2="30" stroke="#2E4A7A" stroke-width="1.5"/>
+  <!-- crack/defect marker on step 2 -->
+  <path d="M10 21 L13 18" stroke="#2E4A7A" stroke-width="1.5"/>
+  <path d="M11 22 L14 19" stroke="#2E4A7A" stroke-width="1" opacity="0.6"/>
+  <!-- warning indicator -->
+  <circle cx="27" cy="10" r="3.5" stroke="#2E4A7A" stroke-width="1.2" fill="none"/>
+  <line x1="27" y1="8.5" x2="27" y2="10.5" stroke="#2E4A7A" stroke-width="1.2"/>
+  <circle cx="27" cy="12" r="0.6" fill="#2E4A7A"/>
+</svg></span>
+        <div class="rank-text"><div class="rank-ratio">1 in every 24 violations</div><div class="rank-name">Stair Defects: Common Areas</div></div>
+        <div class="rank-bar-wrap"><div class="rank-bar" style="width:41%"></div></div>
+        <span class="rank-count">1,519</span>
+      </div>
+
+      <div class="rank-row">
+        <span class="rank-num">9</span>
+        <span class="rank-icon"><svg viewBox="0 0 34 34" fill="none" stroke="#2E4A7A" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="26" height="22" rx="1" stroke="#2E4A7A" stroke-width="1.5"/><line x1="17" y1="6" x2="17" y2="28" stroke="#2E4A7A" stroke-width="1"/><line x1="4" y1="17" x2="30" y2="17" stroke="#2E4A7A" stroke-width="1"/><path d="M8 10 L13 15 M13 10 L8 15" stroke="#2E4A7A" stroke-width="1.5"/></svg></span>
+        <div class="rank-text"><div class="rank-ratio">1 in every 27 violations</div><div class="rank-name">Window/Screen Damage: Unit Interior</div></div>
+        <div class="rank-bar-wrap"><div class="rank-bar" style="width:37%"></div></div>
+        <span class="rank-count">1,372</span>
+      </div>
+
+      <div class="rank-row">
+        <span class="rank-num">10</span>
+        <span class="rank-icon"><svg viewBox="0 0 34 34" fill="none" stroke="#2E4A7A" stroke-linecap="round" stroke-linejoin="round"><circle cx="17" cy="12" r="6" stroke="#2E4A7A" stroke-width="1.5"/><path d="M12 28 Q12 21 17 21 Q22 21 22 28" stroke="#2E4A7A" stroke-width="1.5" fill="none"/><line x1="17" y1="6" x2="17" y2="9" stroke="#2E4A7A" stroke-width="2"/><circle cx="17" cy="12" r="2" fill="#2E4A7A"/></svg></span>
+        <div class="rank-text"><div class="rank-ratio">1 in every 29 violations</div><div class="rank-name">Owner/Responsible Person Not Onsite</div></div>
+        <div class="rank-bar-wrap"><div class="rank-bar" style="width:34%"></div></div>
+        <span class="rank-count">1,262</span>
+      </div>
+
+    </div>
+    <p style="font-size:11px;color:var(--gray-400);font-style:italic;margin-top:16px;border-top:0.5px solid var(--gray-200);padding-top:12px;">Violation descriptions simplified from LA County Environmental Health source data for readability. Original codes available on the LA County Open Data Portal.</p>
+  </div>
+
+
+  <!-- WHAT THIS SUGGESTS -->
+  <div class="impl-card">
+    <div class="impl-label">What This Suggests</div>
+    <p class="impl-lede">92% of these inspections, 44,310 of 48,085, happened at multi-family rental buildings of five or more units. Whatever inspectors find in this dataset, renters are the ones living with it.</p>
+    <div class="impl-zone">
+      <div class="impl-zone-label">Three patterns in what's being found</div>
+      <div class="impl-law-row">
+        <div class="impl-law-date">Building fabric</div>
+        <div class="impl-law-text">Wall, ceiling, and floor damage is the largest grouping, more than 1 in 4 of all 37,026 violations; the two largest single categories are common-area damage (the most frequent violation type overall, 3,553 records) and unit-interior damage (2,254).</div>
+      </div>
+      <div class="impl-law-row">
+        <div class="impl-law-date">Shared spaces</div>
+        <div class="impl-law-text">Seven of the ten most frequent violation types are common-area conditions: hallways, stairwells, refuse areas, the parts of a building no single tenant controls.</div>
+      </div>
+      <div class="impl-law-row">
+        <div class="impl-law-date">Severity profile</div>
+        <div class="impl-law-text">94% of violations are non-critical, the maintenance-and-habitability tier rather than emergencies, a pattern of slow, ongoing wear rather than sudden failure.</div>
+      </div>
+    </div>
+    <p class="impl-p">This combination matters for who can act on it. A tenant can report conditions inside their own unit. <strong>The most common violations in this dataset sit in spaces no individual tenant is responsible for</strong>, in buildings where the owner receives the inspection report and the correction deadlines. When the inspector doesn't come, the conditions most likely to go unrecorded are precisely the shared-space ones.</p>
+    <p class="impl-note">The County's own Healthy Homes Advisory, printed on the inspection report itself, warns that water intrusion &ldquo;can lead to mold growth and costly structural damage.&rdquo; Fabric damage is the category that compounds: what costs a repair when found early costs a remediation when found late.</p>
+    <div class="impl-q-zone">
+      <div class="impl-q-zone-label">The questions this raises</div>
+      <div class="impl-q-item">When the most frequent violations are in shared spaces, who in the building reports them?</div>
+      <div class="impl-q-item">And what is accumulating, unrecorded, in the buildings that have not seen an inspector since 2023?</div>
+    </div>
+    <div class="impl-audience">
+      <div class="impl-audience-icon">i</div>
+      <div class="impl-audience-body">
+        <div class="impl-audience-label">Who should read this</div>
+        <div>Tenant advocacy organizations, renters in buildings of five or more units, and the property owners responsible for correcting what inspectors find.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="db-footer">
+  <p class="footer-source">Source: LA County Open Data Portal · Data accessed February 2026</p>
+  <p class="footer-note">Routine inspections only · Long Beach is absent from the source data · Pasadena, Vernon, and South Pasadena appear as published</p>
+</div>
+<div style="max-width:1200px;margin:0 auto;padding:0 40px 36px;">
+  <div style="border-top:0.5px solid #D8DCE3;padding-top:14px;display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px;">
+    <p style="font-size:12px;color:#6B7280;margin:0;"><strong style="color:#374151;font-weight:600;">Cindy Cruz</strong> &middot; 2026</p>
+    <p style="font-size:12px;margin:0;"><a href="https://www.linkedin.com/in/cindy-c-85b312114/" target="_blank" rel="noopener" style="color:#2E4A7A;text-decoration:none;border-bottom:1px solid #D8DCE3;">LinkedIn</a><span style="color:#9DA3AE;margin:0 8px;">&middot;</span><a href="https://github.com/ccruz92" target="_blank" rel="noopener" style="color:#2E4A7A;text-decoration:none;border-bottom:1px solid #D8DCE3;">GitHub</a></p>
+  </div>
+</div>
+
+
+</body>
+</html>

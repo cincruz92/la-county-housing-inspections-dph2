@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LA County Housing Inspections and Violations - Methods</title>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@300;400;600&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; outline: none !important; }
+  :root {
+    --navy: #2E4A7A; --navy-light: #EEF2F8;
+    --accent: #2E4A7A; --accent-light: #EEF2F8;
+    --white: #FFFFFF; --gray-50: #F7F8FA; --gray-100: #F0F2F6; --gray-200: #EAECF0;
+    --gray-400: #9DA3AE; --gray-600: #6B7280; --gray-700: #374151; --gray-900: #111827;
+    --font-display: "Source Serif 4", serif; --font-body: "IBM Plex Sans", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --radius: 12px; --shadow: 0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.05);
+  }
+  html, body { font-family: var(--font-body); background: var(--gray-100); color: var(--gray-900); min-height: 100vh; font-size: 15px; }
+
+  .db-header { background: transparent; max-width: 1200px; margin: 0 auto; padding: 32px 40px 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  .db-label { font-size: 11px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: #9DA3AE; margin-bottom: 6px; }
+  .db-title { font-family: var(--font-display); font-size: 26px; font-weight: 600; color: var(--navy); line-height: 1.25; }
+
+  .db-body { max-width: 1200px; margin: 0 auto; padding: 30px 40px 20px; }
+  .db-footer { max-width: 1200px; margin: 0 auto; padding: 16px 40px 40px; display: flex; justify-content: space-between; align-items: center; }
+  .footer-source { font-size: 11px; color: var(--gray-400); }
+  .footer-note { font-size: 11px; color: var(--gray-400); font-style: italic; }
+
+  .card { background: var(--white); border-radius: 4px; border: 1px solid #D0D5DD; padding: 26px 28px; box-shadow: 0 1px 3px rgba(16,24,40,0.08), 0 1px 2px rgba(16,24,40,0.06); margin-bottom: 20px; }
+  .card-title { font-family: var(--font-display); font-size: 22px; font-weight: 600; color: var(--navy); margin-bottom: 6px; }
+  .card-sub { font-size: 13px; color: var(--gray-400); margin-bottom: 20px; }
+
+  .lede { font-size: 15px; color: var(--gray-700); line-height: 1.7; }
+  .lede strong { color: var(--navy); font-weight: 600; }
+
+  .category-header { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--navy); margin: 4px 0 14px; padding-bottom: 6px; border-bottom: 1.5px solid var(--navy); }
+
+  .step { background: var(--gray-50); border-radius: 4px; padding: 16px 18px; display: flex; gap: 14px; border: 0.5px solid var(--gray-200); margin-bottom: 12px; }
+  .step-num { font-family: var(--font-display); font-size: 22px; font-weight: 600; color: var(--navy); opacity: 0.25; flex-shrink: 0; line-height: 1.05; min-width: 28px; }
+  .step-content { flex: 1; min-width: 0; }
+  .step-title { font-size: 14px; font-weight: 600; color: var(--gray-900); margin-bottom: 7px; }
+  .step-body { font-size: 13px; color: var(--gray-600); line-height: 1.65; }
+  .step-body + .step-body { margin-top: 9px; }
+  .step-body strong { color: var(--navy); font-weight: 600; }
+
+  .method-note { font-size: 13px; color: var(--gray-900); margin-top: 12px; line-height: 1.65; padding: 12px 16px; background: var(--white); border-left: 3px solid var(--navy); border-radius: 0 4px 4px 0; }
+  .method-note strong { color: var(--navy); font-weight: 600; }
+  .method-note .mn-label { display:block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--navy); margin-bottom: 6px; }
+
+  .spec { font-family: var(--font-mono); font-size: 12.5px; color: var(--gray-700); background: #FBFCFD; border: 0.5px solid var(--gray-200); border-radius: 4px; padding: 11px 14px; margin-top: 10px; line-height: 1.6; overflow-x: auto; }
+  .spec .v { color: var(--navy); font-weight: 500; }
+
+  .crosswalk { font-size: 12px; color: var(--gray-600); line-height: 1.7; background: #FBFCFD; border: 0.5px solid var(--gray-200); border-radius: 4px; padding: 11px 14px; margin-top: 10px; }
+  .crosswalk b { color: var(--gray-900); font-weight: 600; }
+
+  /* reproducibility-at-a-glance table */
+  .repro-wrap { overflow-x: auto; margin-top: 4px; }
+  table.repro { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.repro th { text-align: left; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--gray-400); padding: 0 14px 9px 0; border-bottom: 1.5px solid var(--navy); white-space: nowrap; }
+  table.repro td { padding: 11px 14px 11px 0; border-bottom: 0.5px solid var(--gray-200); color: var(--gray-700); line-height: 1.5; vertical-align: top; }
+  table.repro td.fig { color: var(--gray-900); font-weight: 600; width: 31%; }
+  table.repro td.val { font-family: var(--font-mono); font-size: 12.5px; font-weight: 600; color: var(--navy); white-space: nowrap; width: 16%; }
+  table.repro tr:last-child td { border-bottom: none; }
+
+  .xref { font-size: 13px; color: var(--gray-700); line-height: 1.7; }
+  .xref a { color: var(--navy); text-decoration: none; border-bottom: 1px solid #C7D0DE; }
+  .xref a:hover { border-bottom-color: var(--navy); }
+
+  @media (max-width: 700px) {
+    .db-header { padding: 24px 16px 0; flex-direction: column; }
+    .db-title { font-size: 21px; }
+    .db-body { padding: 22px 16px 16px; }
+    .card { padding: 20px 18px; }
+    .db-footer { flex-direction: column; align-items: flex-start; gap: 6px; padding: 14px 16px 28px; }
+    table.repro td.fig, table.repro td.val { width: auto; }
+  }
+</style>
+</head><body>
+<!-- PORTFOLIO NAVIGATION -->
+<div style="background:#1E3560;padding:12px 40px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+  <a href="index.html" style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);text-decoration:none;white-space:nowrap;letter-spacing:0.06em;text-transform:uppercase;display:flex;align-items:center;gap:6px;">&#8592; Portfolio Home</a>
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <a href="dashboard0.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Start Here</a>
+    <a href="dashboard1.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">The Decline</a>
+    <a href="dashboard2.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Violations by Area</a>
+    <a href="dashboard3.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Property Types</a>
+    <a href="dashboard6.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Look Up a Property</a>
+    <a href="dashboard4.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Equity</a>
+    <a href="methods.html" style="font-size:12px;font-weight:600;color:#ffffff;background:rgba(255,255,255,0.22);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.5);">Methods</a>
+    <a href="dashboard5.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Limitations</a>
+  </div>
+</div>
+
+<div class="db-header">
+  <div>
+    <p class="db-label">How the analysis was built</p>
+    <h1 class="db-title">Methods</h1>
+  </div>
+</div>
+
+<div class="db-body">
+
+  <div class="card">
+    <p class="lede">Every figure on this site comes from two County files and one Census source. This page shows how. It covers the data, the analysis window, how the files are joined, the fields I built, and the math behind each number. The sixteen limitations are on the <span class="xref"><a href="dashboard5.html">Limitations</a></span> page.</p>
+  </div>
+
+  <!-- ============ DATA & SCOPE ============ -->
+  <div class="card">
+    <div class="category-header">Data &amp; Scope</div>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <div class="step-title">Data sources</div>
+        <div class="step-body">Two files from the <strong>LA County Open Data Portal, downloaded February 2026</strong>: housing inspections and violations, both from the Department of Public Health, Environmental Health Division. Demographics come from the <strong>American Community Survey 5-year estimates (2020&ndash;2024)</strong>, pulled from Census Reporter in March 2026 as three ZIP-level tables: median household income (B19013), race and ethnicity (B03002), and renters stretched by housing costs (B25070), which I merge to the inspection ZIPs for the demographic analysis. Census Reporter is an independent, non-profit project; it does not collect its own data, it provides a more usable interface to the Census Bureau's published ACS tables, identified above by their official table IDs.</div>
+        <div class="step-body">A later pull of the inspections file, running through March 2026, is used only to cross-check counts (step 8).</div>
+        <div class="step-body">The County has since replaced both files, so the originals can no longer be downloaded. My copies are in the repository.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <div class="step-title">Scope and window</div>
+        <div class="step-body">The raw inspections file holds <strong>48,458 records</strong>, January 2023 through December 2025. I analyze <strong>January 1, 2023 through September 30, 2025</strong>: <strong>48,085 records</strong>. The other 373 are October&ndash;December 2025, excluded to keep a clean nine-month comparison across years.</div>
+        <div class="step-body"><strong>Routine only.</strong> Every record is a routine inspection. The file has no complaint records.</div>
+        <div class="step-body"><strong>One program.</strong> All records are District Inspection Branch (DIB) inspections. SCEP (City of LA) and RHHP (unincorporated areas) are separate programs and not in this data: the <span class="spec" style="display:inline;padding:1px 5px;margin:0;">RHHP INSPECTION</span> field reads NO for all 48,458 records. Properties are multi-family buildings of five or more units, hotels, and a few SRO and general-housing records.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-content" style="padding-left:0;">
+        <div class="step-title">Fields used, from the County files</div>
+        <div class="crosswalk"><b>ACTIVITY DATE</b>: dates and every period comparison &nbsp;&middot;&nbsp; <b>SERIAL NUMBER</b>: links violations to inspections &nbsp;&middot;&nbsp; <b>SERVICE DESCRIPTION</b>: confirms every record is routine &nbsp;&middot;&nbsp; <b>FACILITY ID</b>: distinct facilities &nbsp;&middot;&nbsp; <b>FACILITY ADDRESS</b>: the Look Up tool &nbsp;&middot;&nbsp; <b>PE DESCRIPTION</b>: property type and unit bands &nbsp;&middot;&nbsp; <b>FACILITY CITY</b>: grouped city &nbsp;&middot;&nbsp; <b>ZIP</b>: demographic data join &nbsp;&middot;&nbsp; <b>PROGRAM STATUS</b>: active or inactive &nbsp;&middot;&nbsp; <b>VIOLATION STATUS</b>: severity &nbsp;&middot;&nbsp; <b>VIOLATION CODE</b> and <b>VIOLATION DESCRIPTION</b>: top violations &nbsp;&middot;&nbsp; <b>RHHP INSPECTION</b>: confirms no RHHP records</div>
+        <div class="step-body" style="margin-top:9px;">These are raw columns, used as downloaded. The helper columns I build from them, grouped city, city type, and property type, are in step 4. ACS fields are separate and listed in step 7.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ LINKAGE & DERIVATION ============ -->
+  <div class="card">
+    <div class="category-header">Linkage &amp; Derivation</div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <div class="step-title">Joining inspections to violations</div>
+        <div class="step-body">The violations file has no dates. Each violation links to an inspection by <span class="spec" style="display:inline;padding:1px 5px;margin:0;">SERIAL NUMBER</span>. From 62,631 raw violations, I reach <strong>37,026</strong>:</div>
+        <div class="spec"><span class="v">62,631</span> raw violations<br>&minus; <span class="v">24,877</span> with no matching SERIAL NUMBER in the inspections file (so no date or property to attach them to)<br>&minus; <span class="v">728</span> tied to the 373 inspections after September 30, 2025 (dropped with them)<br>= <span class="v">37,026</span> violations analyzed</div>
+        <div class="step-body" style="margin-top:11px;"><strong>One record, one inspection.</strong> Each record is one inspection, not one building. The 48,085 inspections happened at <strong>37,009 distinct facilities</strong>, so many properties were inspected more than once.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <div class="step-title">Derived fields</div>
+        <div class="step-body">Three fields, built in the working file.</div>
+        <div class="step-body"><strong>Grouped city.</strong> The County uses neighborhood names for many City of LA properties. I group <strong>36 LA neighborhood labels</strong> under &ldquo;Los Angeles&rdquo;: <strong>27,686 inspections (57.6%)</strong>. Northridge (495) was originally kept separate; that choice was reversed in July 2026 and Northridge is now part of the grouping.</div>
+        <div class="crosswalk"><b>The 36 labels grouped into &ldquo;Los Angeles&rdquo;:</b> Arleta, Bel Air, Canoga Park, Chatsworth, Encino, Granada Hills, Harbor City, Hollywood, Mission Hills, North Hills, North Hollywood, Northridge, Pacific Palisades, Pacoima, Panorama City, Playa del Rey, Playa Vista, Porter Ranch, Reseda, San Pedro, Sherman Oaks, Studio City, Sun Valley, Sunland, Sylmar, Tarzana, Tujunga, Universal City, Valley Glen, Valley Village, Van Nuys, Venice, West Hills, Wilmington, Winnetka, Woodland Hills.</div>
+        <div class="step-body" style="margin-top:11px;"><strong>Why city-keyed and ZIP-keyed counts differ.</strong> A ZIP code can cross city lines, so a count keyed by the city name field and a count keyed by ZIP code will not always match. Northridge is the live example in this data: 495 inspections carry the city name Northridge, while ZIP codes 91324 and 91325 hold 500. The five extra records fall after the September 30, 2025 cutoff in the ZIP-keyed pull. This analysis keys jurisdiction questions by city name. Sources on ZIP-to-place boundaries: the <a href="https://www.census.gov/programs-surveys/geography/guidance/geo-areas/zctas.html">U.S. Census Bureau ZCTA page</a> (primary) and the <a href="https://www.huduser.gov/portal/datasets/usps_crosswalk.html">HUD USPS ZIP crosswalk</a> (secondary).</div>
+        <div class="step-body" style="margin-top:11px;"><strong>City type.</strong> Each record is tagged LA City Neighborhood, Incorporated City, Santa Clarita Neighborhood, or Unincorporated Area. Unincorporated areas are 237 inspections (0.49%), which is why the unincorporated-only RHHP program does not explain the decline.</div>
+        <div class="step-body"><strong>Property type.</strong> From <span class="spec" style="display:inline;padding:1px 5px;margin:0;">PE DESCRIPTION</span>. I sort records into three buckets: <strong>44,310 multi-family</strong> (five or more units), <strong>3,764 hotels</strong>, and <strong>11 SRO and general housing</strong>. The unit and room bands come from the PE DESCRIPTION sub-ranges.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ CALCULATIONS ============ -->
+  <div class="card">
+    <div class="category-header">Calculations</div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-content">
+        <div class="step-title">The inspection decline</div>
+        <div class="step-body">I compare the same nine months each year: January&ndash;September 2023 (26,919) against January&ndash;September 2025 (4,725).</div>
+        <div class="spec">decline = (<span class="v">26,919</span> &minus; <span class="v">4,725</span>) / <span class="v">26,919</span> = <span class="v">82.45%</span> &rarr; reported as 82%</div>
+        <div class="method-note">
+          <span class="mn-label">The equal-window rule</span>
+          Before comparing two periods, write down the start and end date of each side. If the spans differ, trim the longer side, scale up the shorter, or use a rate. Always name the window. An earlier draft compared full-year 2023 to partial 2025 and got 86%, an unequal comparison that overstated the drop. The matched nine-month figure is 82%. This rule applies to every comparison on the site.
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-content">
+        <div class="step-title">Violation rate, intensity, and severity</div>
+        <div class="step-body"><strong>Violation rate</strong> is the share of inspections with at least one violation. Over the matched nine months it rises from <strong>31.6% (2023) to 41.7% (2025)</strong>, reported as 32% to 42%. Across the full window, 16,279 of 48,085 inspections found a violation (34%).</div>
+        <div class="step-body"><strong>Intensity</strong> is the average number of violations per inspection that found one: <strong>2.23 &rarr; 2.28 &rarr; 2.60</strong>, up 17%.</div>
+        <div class="step-body"><strong>Severity</strong> uses the two classifications in the County&rsquo;s inspection guide: Non-Critical and Critical. Of <strong>36,062 classified violations</strong>, <strong>94% are non-critical and 6% critical</strong>.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">7</div>
+      <div class="step-content">
+        <div class="step-title">The demographic regression</div>
+        <div class="step-body">This tests whether the drop hit some neighborhoods harder. The unit is the ZIP code. For each ZIP, I measure inspection change over the same nine-month windows:</div>
+        <div class="spec">change&#37; = (<span class="v">Jan&ndash;Sep 2025</span> &minus; <span class="v">Jan&ndash;Sep 2023</span>) / <span class="v">Jan&ndash;Sep 2023</span> &times; 100</div>
+        <div class="step-body" style="margin-top:11px;">Negative means fewer inspections than 2023. A few ZIPs pass +100% because their 2023 base was tiny. I regress this change, one variable at a time (<strong>bivariate OLS</strong>), on six ACS variables and report R&sup2; for each:</div>
+        <div class="spec">median household income &nbsp;&middot;&nbsp; renters stretched by housing costs (households paying 30%+ of income on rent, &divide; total renters)<br>&#37; Hispanic &nbsp;&middot;&nbsp; &#37; White &nbsp;&middot;&nbsp; &#37; Black &nbsp;&middot;&nbsp; &#37; Asian &nbsp;(each &divide; total population)</div>
+        <div class="step-body" style="margin-top:11px;"><strong>Sample:</strong> 254 ZIP codes, 289 inspection ZIPs minus 35 (24 with no ACS data, 6 with the Census placeholder for unreliable income, 5 with no 2023 base).</div>
+        <div class="step-body"><strong>Result:</strong> I treat R&sup2; &ge; 0.10 as the bar for a real relationship, at least 10% of the variation explained. All six land between <strong>0.004 and 0.020</strong> (income 0.016, housing cost stretch 0.004, Hispanic 0.015, White 0.020, Black 0.020, Asian 0.005). None clears the bar. I tested four race and ethnicity groups; the rest are too small at the ZIP level to estimate well.</div>
+        <div class="method-note"><strong>ZIP vs. ZCTA.</strong> The ACS reports by ZIP Code Tabulation Area (ZCTA), which is close to but not the same as a USPS ZIP. I joined inspection ZIPs to ZCTA values as the nearest match. Standard at this level, but an approximation.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ VALIDATION & REPRODUCIBILITY ============ -->
+  <div class="card">
+    <div class="category-header">Validation &amp; Reproducibility</div>
+
+    <div class="step">
+      <div class="step-num">8</div>
+      <div class="step-content">
+        <div class="step-title">Cross-check against a later extract</div>
+        <div class="step-body">To confirm the drop was real and not a half-loaded download, I compared my extract against a later one running through March 2026. Over the period they share, <strong>April 2023 to September 2025</strong>, they match: the same <strong>36,835 records</strong>, agreeing in all 30 months.</div>
+        <div class="step-body">The later extract was pulled about six months after the window closed, so any late-entered inspections had time to show up. None did. On the shared window the drop is <strong>81.6%</strong>, the same as the headline.</div>
+        <div class="step-body">One limit: the later extract starts in April 2023, so the first quarter of 2023, about <strong>11,250 inspections, 42% of the base</strong>, comes only from the first download. The drop itself reproduced in full.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">9</div>
+      <div class="step-content">
+        <div class="step-title">Sensitivity check: Glendale and Torrance</div>
+        <div class="step-body">The County says it has no enforcement authority in Glendale or Torrance, yet the data holds 2,856 Glendale and 545 Torrance inspections. I kept them but tested the headline without them.</div>
+        <div class="step-body">Dropping all <strong>3,401</strong> records changes the nine-month drop from <strong>82.45% to 81.02%</strong>. The finding holds.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">10</div>
+      <div class="step-content">
+        <div class="step-title">Tools and repository</div>
+        <div class="step-body"><strong>Prep.</strong> I joined the two files and built the derived fields in a spreadsheet. Every figure reproduces from the raw CSVs and the ACS tables above; the demographic analysis R² values reproduce to three decimals.</div>
+        <div class="step-body"><strong>Front end.</strong> The case study was first prototyped in Tableau Public, but the free tier&rsquo;s limited control over design and color made it hard to present the findings clearly, so I moved to a custom HTML, CSS, and JavaScript build. The front-end code was written by Claude (Anthropic) to my direction; the dataset construction, analysis, findings, and visualization design decisions are mine.</div>
+        <div class="step-body"><strong>Repository.</strong> Raw downloads sit unchanged in <span class="spec" style="display:inline;padding:1px 5px;margin:0;">data/county/</span> (the inspection and violation CSVs, downloaded as titled by the County, "Routine and Complaint," though a field-level audit confirms every record is routine) and <span class="spec" style="display:inline;padding:1px 5px;margin:0;">data/acs/</span> (the three Census Reporter tables). The <span class="spec" style="display:inline;padding:1px 5px;margin:0;">Excel/</span> folder holds the working analysis, MERGED_3-8-2026.xlsx and Census_Merge.xlsx, plus PROJECT_SUMMARY.xlsx, a values summary with a Source column citing exactly where each figure comes from rather than a live formula. The joins and derived fields described above were built in a working spreadsheet during analysis; the published figures all reproduce from the raw files using the steps on this page, and the equity R&sup2; values additionally reproduce via a base-R script in <span class="spec" style="display:inline;padding:1px 5px;margin:0;">analysis/replicate_r2.R</span>. The README records pull dates: County files February 2026, ACS tables March 2026, and notes the County has since replaced its source. <em style="color:var(--gray-400);">[Repository link added at publish.]</em></div>
+        <div class="step-body"><strong>Source documents.</strong> The HOIR appendix is a scanned image, so the advisory quoted on Property Types was checked against the image, not pulled as text.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ REPRODUCIBILITY AT A GLANCE ============ -->
+  <div class="card">
+    <div class="card-title">Reproducibility at a glance</div>
+    <div class="card-sub">Each headline figure, its value, and how it is computed.</div>
+    <div class="repro-wrap">
+      <table class="repro">
+        <thead><tr><th>Figure</th><th>Value</th><th>How it is computed</th></tr></thead>
+        <tbody>
+          <tr><td class="fig">Inspection decline</td><td class="val">82%</td><td>(26,919 &minus; 4,725) / 26,919, Jan&ndash;Sep 2023 vs. Jan&ndash;Sep 2025</td></tr>
+          <tr><td class="fig">Inspections analyzed</td><td class="val">48,085</td><td>Routine records dated Jan 1 2023 &ndash; Sep 30 2025 (of 48,458)</td></tr>
+          <tr><td class="fig">Violations analyzed</td><td class="val">37,026</td><td>62,631 raw &minus; 24,877 unmatched &minus; 728 after the window</td></tr>
+          <tr><td class="fig">Distinct facilities</td><td class="val">37,009</td><td>Unique FACILITY ID in the window</td></tr>
+          <tr><td class="fig">Violation rate</td><td class="val">32% &rarr; 42%</td><td>Share with &ge;1 violation, Jan&ndash;Sep 2023 vs. 2025</td></tr>
+          <tr><td class="fig">Violations per inspection</td><td class="val">+17%</td><td>Mean among inspections with violations: 2.23 &rarr; 2.60</td></tr>
+          <tr><td class="fig">City of LA share</td><td class="val">57.6%</td><td>27,686 grouped inspections / 48,085, Northridge included</td></tr>
+          <tr><td class="fig">Demographic Analysis R² (all six)</td><td class="val">&le; 0.020</td><td>Bivariate OLS of per-ZIP change on each ACS variable, n = 254</td></tr>
+          <tr><td class="fig">Cross-check overlap</td><td class="val">81.6%</td><td>Drop on Apr&ndash;Sep, later extract, 36,835 matched records</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" style="background:var(--navy-light);border:0.5px solid #C7D4E6;">
+    <p class="xref">The sixteen limitations are on the <a href="dashboard5.html">Limitations</a> page. For the agencies, programs, and legal terms, see <a href="dashboard0.html">Start Here</a>.</p>
+  </div>
+
+</div>
+
+
+<div style="max-width:1200px;margin:0 auto;padding:0 40px 16px;">
+  <div style="background:var(--navy-light);border-radius:var(--radius);padding:14px 20px;display:flex;align-items:center;gap:14px;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2E4A7A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <p style="font-size:12px;color:var(--gray-600);line-height:1.6;"><strong style="color:var(--navy);">Methodology note &mdash; AI assistance:</strong> The data work and analysis are the author&rsquo;s own: building the merged datasets, creating the fields the analysis needed, running the analysis in Excel, and deciding which visualization fits each finding. Claude (Anthropic) was used to build the front-end &mdash; the page layouts, charts, and interactive features that turn the completed analysis into a publicly viewable case study. Analytical and design decisions were directed by the author.</p>
+  </div>
+</div>
+
+<div class="db-footer">
+  <p class="footer-source">Source: LA County Open Data Portal &middot; Census Reporter ACS 5-Year Estimates (2020-2024) &middot; Data accessed February&ndash;March 2026</p>
+  <p class="footer-note">Routine inspections only &middot; Long Beach is absent from the source data &middot; Pasadena, Vernon, and South Pasadena appear as published</p>
+</div>
+<div style="max-width:1200px;margin:0 auto;padding:0 40px 36px;">
+  <div style="border-top:0.5px solid #D8DCE3;padding-top:14px;display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px;">
+    <p style="font-size:12px;color:#6B7280;margin:0;"><strong style="color:#374151;font-weight:600;">Cindy Cruz</strong> &middot; 2026</p>
+    <p style="font-size:12px;margin:0;"><a href="https://www.linkedin.com/in/cindy-c-85b312114/" target="_blank" rel="noopener" style="color:#2E4A7A;text-decoration:none;border-bottom:1px solid #D8DCE3;">LinkedIn</a><span style="color:#9DA3AE;margin:0 8px;">&middot;</span><a href="https://github.com/ccruz92" target="_blank" rel="noopener" style="color:#2E4A7A;text-decoration:none;border-bottom:1px solid #D8DCE3;">GitHub</a></p>
+  </div>
+</div>
+
+</body>
+</html>

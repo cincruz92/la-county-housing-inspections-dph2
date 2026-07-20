@@ -1,0 +1,6 @@
+# RStudio's personal session state, window layout, breakpoints, open tabs.
+# This is specific to each person's computer and should never be shared.
+.Rproj.user/
+
+# R command history, a personal log of typed commands, not project content.
+.Rhistory

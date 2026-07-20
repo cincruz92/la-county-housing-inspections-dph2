@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LA County Housing Inspections and Violations - Violations by Area</title>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@300;400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; outline: none !important; }
+  :root {
+    --navy: #2E4A7A; --navy-light: #EEF2F8; --orange: #E8873A;
+    --accent: #2E4A7A;
+    --accent-light: #EEF2F8;
+    --white: #FFFFFF; --gray-50: #F7F8FA; --gray-100: #F0F2F6; --gray-200: #EAECF0;
+    --gray-300: #D0D5DD;
+    --gray-400: #9DA3AE; --gray-600: #6B7280; --gray-700: #374151; --gray-900: #111827;
+    --font-display: "Source Serif 4", serif; --font-body: "IBM Plex Sans", sans-serif;
+    --radius: 12px; --shadow: 0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.05);
+  }
+  html, body { font-family: var(--font-body); font-size: 15px; background: var(--gray-100); color: var(--gray-900); min-height: 100vh; }
+  .db-header { background: transparent; max-width: 1200px; margin: 0 auto; padding: 32px 40px 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .db-label { font-size: 11px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: #9DA3AE; margin-bottom: 6px; }
+  .db-title { font-family: var(--font-display); font-size: 26px; font-weight: 600; color: var(--navy); line-height: 1.25; }
+  .db-badge { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22); color: rgba(255,255,255,0.8); font-size: 12px; padding: 5px 14px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; pointer-events: none; user-select: none; }
+  .db-body { max-width: 1200px; margin: 0 auto; padding: 30px 40px 20px; }
+  .db-footer { max-width: 1200px; margin: 0 auto; padding: 16px 40px 40px; display: flex; justify-content: space-between; align-items: center; }
+  .footer-source, .footer-note { font-size: 11px; color: var(--gray-400); }
+  .footer-note { font-style: italic; }
+
+  .chart-card { background: var(--white); border-radius: 4px; box-shadow:0 1px 3px rgba(16,24,40,0.08), 0 1px 2px rgba(16,24,40,0.06); border:1px solid #D0D5DD; padding: 26px 28px 20px; margin-bottom: 20px; }
+  .chart-title { font-family: var(--font-display); font-size: 22px; font-weight: 600; color: var(--navy); text-align: center; margin-bottom: 4px; }
+  .chart-subtitle { font-size: 13px; color: var(--gray-400); text-align: center; margin-bottom: 12px; }
+  .legend { display: flex; justify-content: flex-end; gap: 20px; margin-bottom: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--gray-600); }
+  .legend-line { width: 20px; height: 3px; border-radius: 2px; }
+  .chart-wrap { position: relative; width: 100%; height: 360px; }
+  .axis-label-x { text-align: center; font-size: 12px; color: var(--gray-400); margin-top: 8px; }
+  .axis-note { text-align: center; font-size: 11px; color: var(--gray-400); font-style: italic; margin-top: 4px; }
+
+  .city-banner { background: var(--navy-light); border-left: 4px solid var(--navy); border-radius: 0 var(--radius) var(--radius) 0; padding: 14px 22px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 20px; position: sticky; top: 0; z-index: 20; box-shadow: 0 2px 8px rgba(16,24,40,0.10); }
+  .city-banner-left { }
+  .city-banner-name { font-family: var(--font-display); font-size: 20px; font-weight: 600; color: var(--navy); }
+  .city-banner-hint { font-size: 12px; color: var(--gray-400); margin-top: 3px; }
+  .city-banner-stats { display: flex; gap: 32px; flex-shrink: 0; }
+  .city-banner-clear { flex-shrink: 0; background: var(--white); color: var(--navy); border: 1px solid var(--gray-300); border-radius: 6px; padding: 8px 14px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background 0.15s; }
+  .city-banner-clear:hover { background: var(--gray-50); }
+  .city-stat { text-align: center; }
+  .city-stat-val { font-family: var(--font-display); font-size: 24px; font-weight: 600; color: var(--navy); }
+  .city-stat-val.orange { color: var(--accent, #2E4A7A); }
+  .city-stat-val.chg-up { color: #3B6D11; }
+  .city-stat-val.chg-down { color: #993C1D; }
+  .city-stat-val.chg-warn { color: #854F0B; }
+  .city-stat-label { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+
+  .table-card { background: var(--white); border-radius: 4px; box-shadow:0 1px 3px rgba(16,24,40,0.08), 0 1px 2px rgba(16,24,40,0.06); border:1px solid #D0D5DD; padding: 24px 28px; margin-bottom: 20px; }
+  .table-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .table-title { font-family: var(--font-display); font-size: 22px; font-weight: 600; color: var(--navy); }
+  .table-search { padding: 8px 14px; border: 1px solid var(--gray-200); border-radius: 8px; font-size: 13px; font-family: var(--font-body); color: var(--gray-700); width: 240px; }
+  .table-scroll { max-height: 340px; overflow-y: auto; border: 0.5px solid var(--gray-200); border-radius: 8px; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .data-table th { font-size: 11px; font-weight: 600; color: var(--gray-400); text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 12px; border-bottom: 1.5px solid var(--gray-200); text-align: right; cursor: pointer; user-select: none; white-space: nowrap; background: var(--white); }
+  .data-table thead th { position: sticky; top: 0; z-index: 2; }
+  .data-table th:first-child { text-align: left; }
+  .data-table th:hover, .data-table th.sorted { color: var(--navy); }
+  .data-table td { padding: 10px 12px; border-bottom: 0.5px solid var(--gray-200); color: var(--gray-700); text-align: right; }
+  .data-table td:first-child { text-align: left; font-weight: 500; color: var(--gray-900); }
+  .data-table tr { cursor: pointer; transition: background 0.1s; }
+  .data-table tr:hover { background: var(--gray-50); }
+  .data-table tr.selected:hover { background: var(--navy-light); }
+  .data-table tr.selected { background: var(--navy-light); }
+  .data-table tr.selected td { color: var(--navy); }
+  .data-table tr.parent-row td:first-child .chevron { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--navy-light); color: var(--navy); font-size: 12px; font-weight: 700; margin-right: 8px; vertical-align: middle; transition: transform 0.2s ease; }
+  .data-table tr.parent-row.expanded td:first-child .chevron { transform: rotate(90deg); }
+  .data-table tr.child-row td { background: var(--gray-50); color: var(--gray-700); font-size: 12px; padding: 7px 12px; }
+  .data-table tr.child-row td:first-child { font-weight: 400; color: var(--gray-700); padding-left: 38px; }
+  .data-table tr.child-row td:first-child::before { content: '└ '; color: var(--gray-400); margin-right: 4px; }
+  .data-table tr.child-row.selected { background: var(--navy-light); }
+  .data-table tr.child-row.selected td { color: var(--navy); }
+  .hidden-children-note { font-size: 12px; color: var(--gray-900); margin-top: 12px; line-height: 1.65; padding: 12px 16px; background: var(--navy-light); border-radius: 0 4px 4px 0; border-left: 3px solid var(--navy); display: none; }
+  .hidden-children-note.show { display: block; }
+  .hidden-children-note strong { color: var(--navy); }
+  .method-callout { font-size: 12px; color: var(--gray-900); margin-top: 12px; line-height: 1.65; padding: 12px 16px; background: var(--gray-50); border-left: 3px solid var(--navy); border-radius: 0 4px 4px 0; }
+  .method-callout strong { color: var(--navy); }
+  .data-table tr:last-child td { border-bottom: none; }
+  .vr-pill { display: inline-block; padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: 500; }
+  .vr-low { background: #EEF8F2; color: #2A7A4A; }
+  .vr-mid { background: #FFF8F0; color: #B85E1A; }
+  .vr-high { background: #FFF0F0; color: #A83232; }
+  .table-count { font-size: 12px; color: var(--gray-600); margin-top: 12px; }
+
+
+  /* WHAT THIS SUGGESTS (Layout D) */
+  .impl-card { background: var(--navy-light); border: 1px solid #D0D5DD; border-left: 4px solid var(--navy); border-radius: 4px; box-shadow: 0 1px 3px rgba(16,24,40,0.08), 0 1px 2px rgba(16,24,40,0.06); padding: 32px 36px; margin-bottom: 20px; width: 100%; }
+  .impl-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gray-600); margin-bottom: 16px; }
+  .impl-lede { font-size: 16px; font-weight: 600; color: var(--navy); line-height: 1.55; margin-bottom: 18px; }
+  .impl-p { font-size: 13.5px; color: var(--gray-900); line-height: 1.7; margin-bottom: 18px; }
+  .impl-p strong { color: var(--navy); font-weight: 600; }
+  .impl-zone { background: var(--white); border-radius: 8px; padding: 18px 20px; margin: 20px 0; }
+  .impl-zone-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gray-600); margin-bottom: 12px; }
+  .impl-law-row { display: grid; grid-template-columns: 130px 1fr; gap: 14px; font-size: 13px; line-height: 1.6; color: var(--gray-900); padding: 10px 0; border-bottom: 0.5px solid var(--gray-200); }
+  .impl-law-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .impl-law-row:first-child { padding-top: 0; }
+  .impl-law-date { font-weight: 500; color: var(--gray-600); font-size: 11px; }
+  .impl-law-text strong { font-weight: 500; color: var(--gray-900); }
+  .impl-law-text a { color: var(--navy); text-decoration: underline; text-decoration-color: rgba(46,74,122,0.3); text-underline-offset: 2px; transition: text-decoration-color 0.15s ease; }
+  .impl-law-text a:hover { text-decoration-color: var(--navy); }
+  .impl-synth { font-family: var(--font-display); font-size: 17px; font-weight: 600; color: var(--navy); line-height: 1.5; padding: 16px 18px; background: rgba(255,255,255,0.55); border-radius: 8px; margin: 4px 0 18px; }
+  .impl-note { font-size: 12.5px; color: var(--gray-600); line-height: 1.65; margin-bottom: 12px; }
+  .impl-note:last-of-type { margin-bottom: 0; }
+  .impl-q-zone { background: #1E5A96; border-radius: 10px; padding: 20px 22px; margin: 22px 0 16px; }
+  .impl-q-zone-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(255,255,255,0.6); margin-bottom: 12px; }
+  .impl-q-item { font-size: 15px; font-weight: 500; color: var(--white); line-height: 1.5; margin-bottom: 10px; }
+  .impl-q-item:last-child { margin-bottom: 0; }
+  .impl-audience { display: flex; align-items: flex-start; gap: 10px; background: var(--white); border-radius: 8px; padding: 14px 16px; font-size: 12px; color: var(--gray-700); line-height: 1.6; }
+  .impl-audience-icon { width: 22px; height: 22px; border-radius: 50%; background: var(--navy-light); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--navy); font-weight: 600; }
+  .impl-audience-body { display: flex; flex-direction: column; gap: 4px; }
+  .impl-audience-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gray-400); }
+
+  /* ===== Mobile (added June 2026): no effect above 700px ===== */
+  @media (max-width: 700px) {
+    .db-header { padding: 24px 16px 0; }
+    .db-title { font-size: 21px; }
+    .db-body { padding: 22px 16px 16px; }
+    .impl-law-row { grid-template-columns: 1fr; }
+    table { display: block; overflow-x: auto; }
+    .db-footer { flex-direction: column; align-items: flex-start; gap: 6px; padding: 14px 16px 28px; }
+  }
+</style>
+</head>
+<body>
+<!-- PORTFOLIO NAVIGATION -->
+<div style="background:#1E3560;padding:12px 40px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+  <a href="index.html" style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);text-decoration:none;white-space:nowrap;letter-spacing:0.06em;text-transform:uppercase;display:flex;align-items:center;gap:6px;">&#8592; Portfolio Home</a>
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <a href="dashboard0.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Start Here</a>
+    <a href="dashboard1.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">The Decline</a>
+    <a href="dashboard2.html" style="font-size:12px;font-weight:600;color:#ffffff;background:rgba(255,255,255,0.22);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.5);">Violations by Area</a>
+    <a href="dashboard3.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Property Types</a>
+    <a href="dashboard6.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Look Up a Property</a>
+    <a href="dashboard4.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Equity</a>
+    <a href="methods.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Methods</a>
+    <a href="dashboard5.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Limitations</a>
+  </div>
+</div>
+
+<div class="db-header">
+  <div>
+    <p class="db-label">Violations by Area</p>
+    <h1 class="db-title">As Inspections Declined 82%, Violation Rates Rose Across LA Neighborhoods</h1>
+  </div>
+  
+</div>
+
+<div class="db-body">
+
+  <div class="chart-card">
+    <h2 class="chart-title" id="chartTitle">Inspection and Violation Rate Trends Across LA County</h2>
+    <p class="chart-subtitle" id="chartSubtitle">Showing LA County totals. Click any neighborhood below to filter.</p>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-line" style="background:var(--navy);"></div>Inspections (left axis)</div>
+      <div class="legend-item"><div class="legend-line" style="background:var(--accent,#2E4A7A);"></div>Violation Rate (right axis)</div>
+    </div>
+    <div class="chart-wrap"><canvas id="dualChart"></canvas></div>
+    <p class="axis-label-x">Housing Inspection Year</p>
+    <p class="axis-note">Right axis scaled to data range for readability</p>
+  </div>
+
+  <div class="city-banner" id="cityBanner" style="display:none;">
+    <div class="city-banner-left">
+      <div class="city-banner-name" id="bannerCity"></div>
+      <div class="city-banner-hint">Click the same row to deselect · Click another neighborhood to compare</div>
+    </div>
+    <div class="city-banner-stats" id="bannerStats"></div>
+    <button class="city-banner-clear" onclick="clearCitySelection()">Clear ✕</button>
+  </div>
+
+  <!-- CITY OF LA CALLOUT -->
+  <div style="border-left:4px solid var(--navy);padding:14px 22px;margin-bottom:20px;background:var(--navy-light);border-radius:0 var(--radius) var(--radius) 0;display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
+    <div style="text-align:center;flex-shrink:0;">
+      <div style="font-family:var(--font-display);font-size:32px;font-weight:600;color:var(--navy);">57.6%</div>
+      <div style="font-size:11px;color:var(--gray-400);margin-top:2px;">of all inspections</div>
+    </div>
+    <div style="width:1px;height:44px;background:rgba(46,74,122,0.2);flex-shrink:0;"></div>
+    <p style="font-size:13px;color:var(--gray-600);line-height:1.6;flex:1;">The <strong style="color:var(--navy);">City of Los Angeles</strong> accounts for 57.6% of all 48,085 inspections in this dataset, with 27,686 inspections across the study period. The next largest jurisdictions are Glendale (5.9%), Burbank (4.6%), and Santa Monica (2.5%). No other city exceeds 2% of total inspections. The City of Los Angeles is one of 85 cities under contract with LA County's Environmental Health Division, yet accounts for more than half of all inspections. That level of concentration in a single jurisdiction shapes how countywide trends should be interpreted.</p>
+  </div>
+
+  <div class="table-card">
+    <div class="table-header">
+      <div>
+        <h2 class="table-title">Inspection Activity by City</h2>
+        <p style="font-size:12px;color:var(--gray-400);margin-top:4px;">Number of unique inspections per year.</p>
+      </div>
+      <input type="text" class="table-search" id="searchInput" placeholder="Search city or LA neighborhood...">
+    </div>
+    <div class="table-scroll"><table class="data-table">
+      <thead>
+        <tr>
+          <th onclick="sortTable('city')" id="th-city">City ↕</th>
+          <th onclick="sortTable('insp_2023')" id="th-insp_2023">2023 ↕</th>
+          <th onclick="sortTable('insp_2024')" id="th-insp_2024">2024 ↕</th>
+          <th onclick="sortTable('insp_2025')" id="th-insp_2025">2025 (Jan-Sep) ↕</th>
+        </tr>
+      </thead>
+      <tbody id="tableBodyInsp"></tbody>
+    </table></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px;">
+      <p class="table-count" id="tableCount"></p>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-header">
+      <div>
+        <h2 class="table-title">Violation Rates by City</h2>
+        <p style="font-size:12px;color:var(--gray-400);margin-top:4px;">Share of inspections that found at least one violation. The Combined column pools all three years from raw counts.</p>
+      </div>
+    </div>
+    <div class="table-scroll"><table class="data-table">
+      <thead>
+        <tr>
+          <th onclick="sortTable('city')" id="th-city-vr">City ↕</th>
+          <th onclick="sortTable('vr_2023')" id="th-vr_2023">2023 ↕</th>
+          <th onclick="sortTable('vr_2024')" id="th-vr_2024">2024 ↕</th>
+          <th onclick="sortTable('vr_2025')" id="th-vr_2025">2025 ↕</th>
+          <th onclick="sortTable('vr_combined')" id="th-vr_combined" title="Calculated from raw counts: total inspections with violations across 2023, 2024, and 2025, divided by total inspections in the same period. Not an average of the three year-by-year percentages." style="border-left:0.5px solid var(--gray-300);background:var(--gray-50);">Combined (2023-2025) ↕</th>
+        </tr>
+      </thead>
+      <tbody id="tableBodyVR"></tbody>
+    </table></div>
+    <p class="method-callout"><strong>Combined Rate methodology:</strong> Calculated from raw counts (total inspections with violations across 2023-2025 divided by total inspections in the same period). Not an average of the three year-by-year percentages. This matters most for neighborhoods where one year had few inspections.</p>
+    <p class="method-callout"><strong>Sample-size methodology:</strong> Rates are not displayed for cells with fewer than 10 inspections because such small samples produce unreliable percentages. The raw count is shown instead in italics. Cells with 10-49 inspections show a <span style="color:#92400E;">⚠</span> warning. A small inspection count in a given city is itself worth attention: it may reflect reduced DIB capacity or limited inspection coverage rather than improved housing conditions, since DIB inspects incorporated cities at its own discretion rather than under a mandate.</p>
+    <p id="hiddenChildrenNote" class="hidden-children-note"></p>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px;">
+      <span style="font-size:11px;color:var(--gray-400);">Violation rate:</span>
+      <span class="vr-pill vr-low">Under 30%: Lower concern</span>
+      <span class="vr-pill vr-mid">30-60%: Moderate concern</span>
+      <span class="vr-pill vr-high">Over 60%: Higher concern</span>
+    </div>
+  </div>
+
+
+  <!-- WHAT THIS SUGGESTS (lede + city-keyed facts + closing) -->
+  <div class="impl-card">
+    <div class="impl-label">What This Suggests</div>
+    <p class="impl-lede">82% is the countywide average, but no city actually experienced an 82% decline. Burbank lost 10% of its inspections. Paramount lost all of them, from 115 down to zero. The county-level number hides two entirely different realities.</p>
+    <p class="impl-p">Because DIB has no required inspection schedule for incorporated cities, each city's inspection count reflects choices about where DIB sent inspectors, not necessarily conditions on the ground.</p>
+    <div class="impl-zone">
+      <div class="impl-zone-label">Same nine months, radically different directions</div>
+      <div class="impl-law-row">
+        <div class="impl-law-date">Burbank</div>
+        <div class="impl-law-text">Fell only 10%, from 662 inspections in January through September 2023 to 598 in the same months of 2025. One contracted city kept nearly its full inspection volume while its neighbors lost almost everything.</div>
+      </div>
+      <div class="impl-law-row">
+        <div class="impl-law-date">Glendale</div>
+        <div class="impl-law-text">Fell 99%, from 1,858 inspections to 20.</div>
+      </div>
+      <div class="impl-law-row">
+        <div class="impl-law-date">Paramount</div>
+        <div class="impl-law-text">115 inspections in January through September 2023. Zero in the same months of 2025.</div>
+      </div>
+      <div class="impl-law-row">
+        <div class="impl-law-date">Sierra Madre</div>
+        <div class="impl-law-text">40 inspections in January through September 2023. Zero in the same months of 2025.</div>
+      </div>
+    </div>
+    <p class="impl-p">Twelve cities in total had inspection activity in 2023 and none at all in January through September 2025. The two largest inspection cities moved with the countywide trend, Los Angeles down 83% (15,572 to 2,670) and Santa Monica down 94% (912 to 59). Nothing in the data explains why coverage continued in one city and stopped in another.</p>
+    <p class="impl-note">This page suppresses violation rates for areas under 10 inspections because a rate is statistically meaningless at that size. But the small count is itself the finding. Sixteen of the 95 cities and areas in this analysis fall under that threshold across the entire period. A city showing four inspections is not necessarily a healthy city. It may simply be an uninspected one.</p>
+    <div class="impl-q-zone">
+      <div class="impl-q-zone-label">The questions this raises</div>
+      <div class="impl-q-item">For a renter in Paramount or Sierra Madre, is zero inspections good news or absent coverage?</div>
+      <div class="impl-q-item">Which contracted cities does DIB still actively inspect, and who decides?</div>
+    </div>
+    <div class="impl-audience">
+      <div class="impl-audience-icon">i</div>
+      <div class="impl-audience-body">
+        <div class="impl-audience-label">Who should read this</div>
+        <div>City councils, city managers, and tenant advocacy organizations in the 85 contracted cities.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="db-footer">
+  <p class="footer-source">Source: LA County Open Data Portal · Data accessed February 2026</p>
+  <p class="footer-note">Routine inspections only · Long Beach is absent from the source data · Pasadena, Vernon, and South Pasadena appear as published</p>
+</div>
+<div style="max-width:1200px;margin:0 auto;padding:0 40px 36px;">
+  <div style="border-top:0.5px solid #D8DCE3;padding-top:14px;display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px;">
+    <p style="font-size:12px;color:#6B7280;margin:0;"><strong style="color:#374151;font-weight:600;">Cindy Cruz</strong> &middot; 2026</p>
+    <p style="font-size:12px;margin:0;"><a href="https://www.linkedin.com/in/cindy-c-85b312114/" target="_blank" rel="noopener" style="color:#2E4A7A;text-decoration:none;border-bottom:1px solid #D8DCE3;">LinkedIn</a><span style="color:#9DA3AE;margin:0 8px;">&middot;</span><a href="https://github.com/ccruz92" target="_blank" rel="noopener" style="color:#2E4A7A;text-decoration:none;border-bottom:1px solid #D8DCE3;">GitHub</a></p>
+  </div>
+</div>
+
+
+<script>
+const NAVY = '#2E4A7A';
+const ORANGE = '#2E4A7A';
+const ALL_DATA = [{"city": "LOS ANGELES", "is_aggregate": true, "insp_2023": 19748, "insp_2024": 5268, "insp_2025": 2670, "insp_2023_janSep": 15572, "vr_2023": 32.9, "vr_2024": 36.5, "vr_2025": 40.1, "vr_combined": 34.3, "small_sample": false, "children": [{"name": "Los Angeles", "insp_2023": 14920, "insp_2024": 2953, "insp_2025": 1111, "insp_2023_janSep": 11985, "vr_2023": 35.4, "vr_2024": 39.6, "vr_2025": 45.4, "vr_combined": 36.6, "total": 18984, "small_sample": false}, {"name": "North Hollywood", "insp_2023": 1234, "insp_2024": 333, "insp_2025": 382, "insp_2023_janSep": 920, "vr_2023": 15.8, "vr_2024": 16.5, "vr_2025": 21.5, "vr_combined": 17.0, "total": 1949, "small_sample": false}, {"name": "Van Nuys", "insp_2023": 760, "insp_2024": 451, "insp_2025": 298, "insp_2023_janSep": 543, "vr_2023": 23.4, "vr_2024": 20.4, "vr_2025": 45.0, "vr_combined": 26.8, "total": 1509, "small_sample": false}, {"name": "Northridge", "insp_2023": 241, "insp_2024": 168, "insp_2025": 86, "insp_2023_janSep": 174, "vr_2023": 22.4, "vr_2024": 44.6, "vr_2025": 47.7, "vr_combined": 34.3, "total": 495, "small_sample": false}, {"name": "Canoga Park", "insp_2023": 206, "insp_2024": 132, "insp_2025": 85, "insp_2023_janSep": 167, "vr_2023": 31.1, "vr_2024": 53.8, "vr_2025": 44.7, "vr_combined": 40.9, "total": 423, "small_sample": false}, {"name": "Valley Village", "insp_2023": 214, "insp_2024": 96, "insp_2025": 94, "insp_2023_janSep": 154, "vr_2023": 23.8, "vr_2024": 19.8, "vr_2025": 13.8, "vr_combined": 20.5, "total": 404, "small_sample": false}, {"name": "Panorama City", "insp_2023": 133, "insp_2024": 134, "insp_2025": 87, "insp_2023_janSep": 104, "vr_2023": 48.9, "vr_2024": 44.8, "vr_2025": 56.3, "vr_combined": 49.2, "total": 354, "small_sample": false}, {"name": "San Pedro", "insp_2023": 233, "insp_2024": 67, "insp_2025": 23, "insp_2023_janSep": 203, "vr_2023": 55.8, "vr_2024": 58.2, "vr_2025": 87.0, "vr_combined": 58.5, "total": 323, "small_sample": false}, {"name": "Wilmington", "insp_2023": 190, "insp_2024": 82, "insp_2025": 25, "insp_2023_janSep": 142, "vr_2023": 28.9, "vr_2024": 43.9, "vr_2025": 72.0, "vr_combined": 36.7, "total": 297, "small_sample": false}, {"name": "Tujunga", "insp_2023": 116, "insp_2024": 74, "insp_2025": 104, "insp_2023_janSep": 54, "vr_2023": 10.3, "vr_2024": 18.9, "vr_2025": 17.3, "vr_combined": 15.0, "total": 294, "small_sample": false}, {"name": "Sherman Oaks", "insp_2023": 175, "insp_2024": 68, "insp_2025": 46, "insp_2023_janSep": 135, "vr_2023": 30.9, "vr_2024": 44.1, "vr_2025": 39.1, "vr_combined": 35.3, "total": 289, "small_sample": false}, {"name": "Harbor City", "insp_2023": 158, "insp_2024": 80, "insp_2025": 37, "insp_2023_janSep": 116, "vr_2023": 16.5, "vr_2024": 16.2, "vr_2025": 37.8, "vr_combined": 19.3, "total": 275, "small_sample": false}, {"name": "Reseda", "insp_2023": 146, "insp_2024": 80, "insp_2025": 46, "insp_2023_janSep": 109, "vr_2023": 21.2, "vr_2024": 42.5, "vr_2025": 34.8, "vr_combined": 29.8, "total": 272, "small_sample": false}, {"name": "Studio City", "insp_2023": 98, "insp_2024": 51, "insp_2025": 53, "insp_2023_janSep": 65, "vr_2023": 17.3, "vr_2024": 19.6, "vr_2025": 28.3, "vr_combined": 20.8, "total": 202, "small_sample": false}, {"name": "Venice", "insp_2023": 174, "insp_2024": 12, "insp_2025": 4, "insp_2023_janSep": 129, "vr_2023": 29.3, "vr_2024": 25.0, "vr_2025": 75.0, "vr_combined": 30.0, "total": 190, "small_sample": false}, {"name": "Winnetka", "insp_2023": 120, "insp_2024": 57, "insp_2025": 10, "insp_2023_janSep": 84, "vr_2023": 19.2, "vr_2024": 45.6, "vr_2025": 40.0, "vr_combined": 28.3, "total": 187, "small_sample": false}, {"name": "North Hills", "insp_2023": 79, "insp_2024": 58, "insp_2025": 39, "insp_2023_janSep": 61, "vr_2023": 59.5, "vr_2024": 56.9, "vr_2025": 51.3, "vr_combined": 56.8, "total": 176, "small_sample": false}, {"name": "Sylmar", "insp_2023": 83, "insp_2024": 35, "insp_2025": 11, "insp_2023_janSep": 76, "vr_2023": 37.3, "vr_2024": 65.7, "vr_2025": 81.8, "vr_combined": 48.8, "total": 129, "small_sample": false}, {"name": "Playa Del Rey", "insp_2023": 114, "insp_2024": 2, "insp_2025": 8, "insp_2023_janSep": 90, "vr_2023": 21.1, "vr_2024": 50.0, "vr_2025": 12.5, "vr_combined": 21.0, "total": 124, "small_sample": false}, {"name": "Sun Valley", "insp_2023": 51, "insp_2024": 50, "insp_2025": 19, "insp_2023_janSep": 24, "vr_2023": 0.0, "vr_2024": 28.0, "vr_2025": 42.1, "vr_combined": 18.3, "total": 120, "small_sample": false}, {"name": "Pacoima", "insp_2023": 59, "insp_2024": 43, "insp_2025": 15, "insp_2023_janSep": 44, "vr_2023": 40.7, "vr_2024": 58.1, "vr_2025": 53.3, "vr_combined": 48.7, "total": 117, "small_sample": false}, {"name": "Chatsworth", "insp_2023": 45, "insp_2024": 55, "insp_2025": 3, "insp_2023_janSep": 35, "vr_2023": 26.7, "vr_2024": 23.6, "vr_2025": 100.0, "vr_combined": 27.2, "total": 103, "small_sample": false}, {"name": "Granada Hills", "insp_2023": 29, "insp_2024": 57, "insp_2025": 13, "insp_2023_janSep": 14, "vr_2023": 31.0, "vr_2024": 45.6, "vr_2025": 76.9, "vr_combined": 45.5, "total": 99, "small_sample": false}, {"name": "Woodland Hills", "insp_2023": 46, "insp_2024": 33, "insp_2025": 18, "insp_2023_janSep": 42, "vr_2023": 34.8, "vr_2024": 51.5, "vr_2025": 61.1, "vr_combined": 45.4, "total": 97, "small_sample": false}, {"name": "Tarzana", "insp_2023": 45, "insp_2024": 29, "insp_2025": 6, "insp_2023_janSep": 36, "vr_2023": 37.8, "vr_2024": 17.2, "vr_2025": 83.3, "vr_combined": 33.8, "total": 80, "small_sample": false}, {"name": "Encino", "insp_2023": 31, "insp_2024": 15, "insp_2025": 16, "insp_2023_janSep": 24, "vr_2023": 45.2, "vr_2024": 53.3, "vr_2025": 37.5, "vr_combined": 45.2, "total": 62, "small_sample": false}, {"name": "Sunland", "insp_2023": 10, "insp_2024": 22, "insp_2025": 26, "insp_2023_janSep": 10, "vr_2023": 0.0, "vr_2024": 22.7, "vr_2025": 7.7, "vr_combined": 12.1, "total": 58, "small_sample": false}], "hidden_children_note": "Mission Hills (24); Pacific Palisades (22); Hollywood (10); Porter Ranch (6); Universal City (6); Arleta (2); Bel Air (1); Playa Vista (1); Valley Glen (1); West Hills (1)"}, {"city": "GLENDALE", "insp_2023": 2381, "insp_2024": 455, "insp_2025": 20, "vr_2023": 2.7, "vr_2024": 4.4, "vr_2025": 60.0, "insp_2023_janSep": 1858, "vr_combined": 3.4, "small_sample": false}, {"city": "BURBANK", "insp_2023": 1045, "insp_2024": 574, "insp_2025": 598, "vr_2023": 11.9, "vr_2024": 11.7, "vr_2025": 5.4, "insp_2023_janSep": 662, "vr_combined": 10.1, "small_sample": false}, {"city": "SANTA MONICA", "insp_2023": 1032, "insp_2024": 94, "insp_2025": 59, "vr_2023": 12.3, "vr_2024": 62.8, "vr_2025": 74.6, "insp_2023_janSep": 912, "vr_combined": 19.4, "small_sample": false}, {"city": "INGLEWOOD", "insp_2023": 726, "insp_2024": 123, "insp_2025": 19, "vr_2023": 36.8, "vr_2024": 50.4, "vr_2025": 63.2, "insp_2023_janSep": 468, "vr_combined": 39.3, "small_sample": false}, {"city": "HAWTHORNE", "insp_2023": 546, "insp_2024": 130, "insp_2025": 13, "vr_2023": 54.6, "vr_2024": 27.7, "vr_2025": 92.3, "insp_2023_janSep": 413, "vr_combined": 50.2, "small_sample": false}, {"city": "BELLFLOWER", "insp_2023": 459, "insp_2024": 64, "insp_2025": 86, "vr_2023": 38.6, "vr_2024": 62.5, "vr_2025": 82.6, "insp_2023_janSep": 349, "vr_combined": 47.3, "small_sample": false}, {"city": "TORRANCE", "insp_2023": 456, "insp_2024": 63, "insp_2025": 26, "vr_2023": 22.4, "vr_2024": 65.1, "vr_2025": 92.3, "insp_2023_janSep": 404, "vr_combined": 30.6, "small_sample": false}, {"city": "DOWNEY", "insp_2023": 427, "insp_2024": 62, "insp_2025": 23, "vr_2023": 62.3, "vr_2024": 67.7, "vr_2025": 69.6, "insp_2023_janSep": 253, "vr_combined": 63.3, "small_sample": false}, {"city": "REDONDO BEACH", "insp_2023": 403, "insp_2024": 59, "insp_2025": 27, "vr_2023": 45.2, "vr_2024": 25.4, "vr_2025": 96.3, "insp_2023_janSep": 284, "vr_combined": 45.6, "small_sample": false}, {"city": "BEVERLY HILLS", "insp_2023": 397, "insp_2024": 44, "insp_2025": 21, "vr_2023": 13.9, "vr_2024": 29.5, "vr_2025": 33.3, "insp_2023_janSep": 325, "vr_combined": 16.2, "small_sample": false}, {"city": "ALHAMBRA", "insp_2023": 366, "insp_2024": 47, "insp_2025": 39, "vr_2023": 41.8, "vr_2024": 53.2, "vr_2025": 38.5, "insp_2023_janSep": 247, "vr_combined": 42.7, "small_sample": false}, {"city": "SOUTH GATE", "insp_2023": 268, "insp_2024": 29, "insp_2025": 25, "vr_2023": 48.5, "vr_2024": 82.8, "vr_2025": 100.0, "insp_2023_janSep": 213, "vr_combined": 55.6, "small_sample": false}, {"city": "BELL GARDENS", "insp_2023": 266, "insp_2024": 32, "insp_2025": 5, "vr_2023": 49.2, "vr_2024": 43.8, "vr_2025": 100.0, "insp_2023_janSep": 213, "vr_combined": 49.5, "small_sample": false}, {"city": "GARDENA", "insp_2023": 250, "insp_2024": 145, "insp_2025": 76, "vr_2023": 41.6, "vr_2024": 46.2, "vr_2025": 56.6, "insp_2023_janSep": 136, "vr_combined": 45.4, "small_sample": false}, {"city": "COVINA", "insp_2023": 229, "insp_2024": 17, "insp_2025": 38, "vr_2023": 22.3, "vr_2024": 41.2, "vr_2025": 39.5, "insp_2023_janSep": 209, "vr_combined": 25.7, "small_sample": false}, {"city": "WEST HOLLYWOOD", "insp_2023": 223, "insp_2024": 54, "insp_2025": 8, "vr_2023": 10.3, "vr_2024": 14.8, "vr_2025": 75.0, "insp_2023_janSep": 161, "vr_combined": 13.0, "small_sample": false}, {"city": "EL MONTE", "insp_2023": 221, "insp_2024": 32, "insp_2025": 55, "vr_2023": 34.4, "vr_2024": 75.0, "vr_2025": 65.5, "insp_2023_janSep": 207, "vr_combined": 44.2, "small_sample": false}, {"city": "MAYWOOD", "insp_2023": 219, "insp_2024": 6, "insp_2025": 4, "vr_2023": 69.4, "vr_2024": 100.0, "vr_2025": 75.0, "insp_2023_janSep": 212, "vr_combined": 70.3, "small_sample": false}, {"city": "WHITTIER", "insp_2023": 215, "insp_2024": 89, "insp_2025": 17, "vr_2023": 63.7, "vr_2024": 76.4, "vr_2025": 94.1, "insp_2023_janSep": 189, "vr_combined": 68.8, "small_sample": false}, {"city": "MONTEBELLO", "insp_2023": 211, "insp_2024": 35, "insp_2025": 37, "vr_2023": 64.5, "vr_2024": 94.3, "vr_2025": 91.9, "insp_2023_janSep": 143, "vr_combined": 71.7, "small_sample": false}, {"city": "POMONA", "insp_2023": 206, "insp_2024": 45, "insp_2025": 15, "vr_2023": 33.0, "vr_2024": 82.2, "vr_2025": 80.0, "insp_2023_janSep": 159, "vr_combined": 44.0, "small_sample": false}, {"city": "MONTEREY PARK", "insp_2023": 188, "insp_2024": 35, "insp_2025": 32, "vr_2023": 60.6, "vr_2024": 62.9, "vr_2025": 68.8, "insp_2023_janSep": 70, "vr_combined": 62.0, "small_sample": false}, {"city": "MONROVIA", "insp_2023": 186, "insp_2024": 21, "insp_2025": 31, "vr_2023": 31.2, "vr_2024": 38.1, "vr_2025": 41.9, "insp_2023_janSep": 177, "vr_combined": 33.2, "small_sample": false}, {"city": "LYNWOOD", "insp_2023": 178, "insp_2024": 19, "insp_2025": 45, "vr_2023": 20.2, "vr_2024": 78.9, "vr_2025": 44.4, "insp_2023_janSep": 165, "vr_combined": 29.3, "small_sample": false}, {"city": "CUDAHY", "insp_2023": 164, "insp_2024": 27, "insp_2025": 1, "vr_2023": 51.2, "vr_2024": 85.2, "vr_2025": 100.0, "insp_2023_janSep": 113, "vr_combined": 56.2, "small_sample": false}, {"city": "HUNTINGTON PARK", "insp_2023": 159, "insp_2024": 25, "insp_2025": 6, "vr_2023": 71.7, "vr_2024": 76.0, "vr_2025": 100.0, "insp_2023_janSep": 141, "vr_combined": 73.2, "small_sample": false}, {"city": "SOUTH EL MONTE", "insp_2023": 158, "insp_2024": 23, "insp_2025": 11, "vr_2023": 38.0, "vr_2024": 82.6, "vr_2025": 90.9, "insp_2023_janSep": 153, "vr_combined": 46.4, "small_sample": false}, {"city": "LAKEWOOD", "insp_2023": 150, "insp_2024": 43, "insp_2025": 10, "vr_2023": 6.7, "vr_2024": 20.9, "vr_2025": 90.0, "insp_2023_janSep": 92, "vr_combined": 13.8, "small_sample": false}, {"city": "PALMDALE", "insp_2023": 148, "insp_2024": 77, "insp_2025": 16, "vr_2023": 54.7, "vr_2024": 51.9, "vr_2025": 62.5, "insp_2023_janSep": 82, "vr_combined": 54.4, "small_sample": false}, {"city": "LAWNDALE", "insp_2023": 138, "insp_2024": 26, "insp_2025": 14, "vr_2023": 44.9, "vr_2024": 19.2, "vr_2025": 50.0, "insp_2023_janSep": 111, "vr_combined": 41.6, "small_sample": false}, {"city": "NORWALK", "insp_2023": 137, "insp_2024": 65, "insp_2025": 31, "vr_2023": 32.1, "vr_2024": 66.2, "vr_2025": 58.1, "insp_2023_janSep": 116, "vr_combined": 45.1, "small_sample": false}, {"city": "PARAMOUNT", "insp_2023": 136, "insp_2024": 17, "insp_2025": 0, "vr_2023": 46.3, "vr_2024": 64.7, "vr_2025": 0.0, "insp_2023_janSep": 115, "vr_combined": 48.4, "small_sample": false}, {"city": "CULVER CITY", "insp_2023": 132, "insp_2024": 11, "insp_2025": 8, "vr_2023": 46.2, "vr_2024": 45.5, "vr_2025": 100.0, "insp_2023_janSep": 118, "vr_combined": 49.0, "small_sample": false}, {"city": "BELL", "insp_2023": 132, "insp_2024": 12, "insp_2025": 10, "vr_2023": 47.7, "vr_2024": 91.7, "vr_2025": 100.0, "insp_2023_janSep": 119, "vr_combined": 54.5, "small_sample": false}, {"city": "EL SEGUNDO", "insp_2023": 130, "insp_2024": 48, "insp_2025": 152, "vr_2023": 29.2, "vr_2024": 6.2, "vr_2025": 17.8, "insp_2023_janSep": 121, "vr_combined": 20.6, "small_sample": false}, {"city": "LANCASTER", "insp_2023": 128, "insp_2024": 57, "insp_2025": 17, "vr_2023": 54.7, "vr_2024": 66.7, "vr_2025": 70.6, "insp_2023_janSep": 84, "vr_combined": 59.4, "small_sample": false}, {"city": "SAN GABRIEL", "insp_2023": 126, "insp_2024": 33, "insp_2025": 21, "vr_2023": 28.6, "vr_2024": 30.3, "vr_2025": 19.0, "insp_2023_janSep": 122, "vr_combined": 27.8, "small_sample": false}, {"city": "ARCADIA", "insp_2023": 110, "insp_2024": 20, "insp_2025": 17, "vr_2023": 14.5, "vr_2024": 45.0, "vr_2025": 47.1, "insp_2023_janSep": 69, "vr_combined": 22.4, "small_sample": false}, {"city": "HERMOSA BEACH", "insp_2023": 99, "insp_2024": 12, "insp_2025": 6, "vr_2023": 49.5, "vr_2024": 25.0, "vr_2025": 66.7, "insp_2023_janSep": 84, "vr_combined": 47.9, "small_sample": false}, {"city": "SAN FERNANDO", "insp_2023": 98, "insp_2024": 85, "insp_2025": 10, "vr_2023": 25.5, "vr_2024": 51.8, "vr_2025": 40.0, "insp_2023_janSep": 57, "vr_combined": 37.8, "small_sample": false}, {"city": "ROSEMEAD", "insp_2023": 88, "insp_2024": 18, "insp_2025": 18, "vr_2023": 43.2, "vr_2024": 77.8, "vr_2025": 77.8, "insp_2023_janSep": 79, "vr_combined": 53.2, "small_sample": false}, {"city": "AZUSA", "insp_2023": 75, "insp_2024": 19, "insp_2025": 28, "vr_2023": 36.0, "vr_2024": 68.4, "vr_2025": 85.7, "insp_2023_janSep": 53, "vr_combined": 52.5, "small_sample": false}, {"city": "BALDWIN PARK", "insp_2023": 74, "insp_2024": 13, "insp_2025": 17, "vr_2023": 31.1, "vr_2024": 61.5, "vr_2025": 70.6, "insp_2023_janSep": 65, "vr_combined": 41.3, "small_sample": false}, {"city": "COMPTON", "insp_2023": 74, "insp_2024": 8, "insp_2025": 10, "vr_2023": 50.0, "vr_2024": 75.0, "vr_2025": 90.0, "insp_2023_janSep": 68, "vr_combined": 56.5, "small_sample": false}, {"city": "GLENDORA", "insp_2023": 69, "insp_2024": 5, "insp_2025": 10, "vr_2023": 24.6, "vr_2024": 100.0, "vr_2025": 50.0, "insp_2023_janSep": 55, "vr_combined": 32.1, "small_sample": false}, {"city": "WEST COVINA", "insp_2023": 61, "insp_2024": 26, "insp_2025": 26, "vr_2023": 45.9, "vr_2024": 57.7, "vr_2025": 50.0, "insp_2023_janSep": 53, "vr_combined": 49.6, "small_sample": false}, {"city": "MANHATTAN BEACH", "insp_2023": 55, "insp_2024": 16, "insp_2025": 6, "vr_2023": 23.6, "vr_2024": 0.0, "vr_2025": 83.3, "insp_2023_janSep": 44, "vr_combined": 23.4, "small_sample": false}, {"city": "CARSON", "insp_2023": 54, "insp_2024": 25, "insp_2025": 15, "vr_2023": 35.2, "vr_2024": 36.0, "vr_2025": 46.7, "insp_2023_janSep": 36, "vr_combined": 37.2, "small_sample": false}, {"city": "LOMITA", "insp_2023": 54, "insp_2024": 24, "insp_2025": 8, "vr_2023": 38.9, "vr_2024": 41.7, "vr_2025": 25.0, "insp_2023_janSep": 44, "vr_combined": 38.4, "small_sample": false}, {"city": "SIERRA MADRE", "insp_2023": 53, "insp_2024": 1, "insp_2025": 0, "vr_2023": 3.8, "vr_2024": 0.0, "vr_2025": 0.0, "insp_2023_janSep": 40, "vr_combined": 3.7, "small_sample": false}, {"city": "SIGNAL HILL", "insp_2023": 51, "insp_2024": 8, "insp_2025": 5, "vr_2023": 17.6, "vr_2024": 75.0, "vr_2025": 100.0, "insp_2023_janSep": 45, "vr_combined": 31.2, "small_sample": false}, {"city": "CLAREMONT", "insp_2023": 49, "insp_2024": 5, "insp_2025": 4, "vr_2023": 20.4, "vr_2024": 100.0, "vr_2025": 50.0, "insp_2023_janSep": 27, "vr_combined": 29.3, "small_sample": false}, {"city": "LA PUENTE", "insp_2023": 48, "insp_2024": 8, "insp_2025": 9, "vr_2023": 68.8, "vr_2024": 87.5, "vr_2025": 77.8, "insp_2023_janSep": 45, "vr_combined": 72.3, "small_sample": false}, {"city": "COMMERCE", "insp_2023": 42, "insp_2024": 11, "insp_2025": 9, "vr_2023": 64.3, "vr_2024": 90.9, "vr_2025": 100.0, "insp_2023_janSep": 28, "vr_combined": 74.2, "small_sample": false}, {"city": "PICO RIVERA", "insp_2023": 39, "insp_2024": 20, "insp_2025": 7, "vr_2023": 51.3, "vr_2024": 85.0, "vr_2025": 85.7, "insp_2023_janSep": 28, "vr_combined": 65.2, "small_sample": false}, {"city": "AVALON", "insp_2023": 39, "insp_2024": 53, "insp_2025": 33, "vr_2023": 69.2, "vr_2024": 69.8, "vr_2025": 57.6, "insp_2023_janSep": 32, "vr_combined": 66.4, "small_sample": false}, {"city": "ARTESIA", "insp_2023": 37, "insp_2024": 4, "insp_2025": 16, "vr_2023": 16.2, "vr_2024": 50.0, "vr_2025": 93.8, "insp_2023_janSep": 28, "vr_combined": 40.4, "small_sample": false}, {"city": "TEMPLE CITY", "insp_2023": 37, "insp_2024": 5, "insp_2025": 6, "vr_2023": 21.6, "vr_2024": 20.0, "vr_2025": 0.0, "insp_2023_janSep": 21, "vr_combined": 18.8, "small_sample": true}, {"city": "LA MIRADA", "insp_2023": 28, "insp_2024": 15, "insp_2025": 12, "vr_2023": 53.6, "vr_2024": 46.7, "vr_2025": 83.3, "insp_2023_janSep": 17, "vr_combined": 58.2, "small_sample": false}, {"city": "MARINA DEL REY", "insp_2023": 28, "insp_2024": 13, "insp_2025": 5, "vr_2023": 35.7, "vr_2024": 69.2, "vr_2025": 100.0, "insp_2023_janSep": 19, "vr_combined": 52.2, "small_sample": true}, {"city": "SANTA FE SPRINGS", "insp_2023": 26, "insp_2024": 8, "insp_2025": 3, "vr_2023": 15.4, "vr_2024": 75.0, "vr_2025": 100.0, "insp_2023_janSep": 23, "vr_combined": 35.1, "small_sample": true}, {"city": "SAN DIMAS", "insp_2023": 25, "insp_2024": 8, "insp_2025": 5, "vr_2023": 20.0, "vr_2024": 100.0, "vr_2025": 80.0, "insp_2023_janSep": 15, "vr_combined": 44.7, "small_sample": true}, {"city": "AGOURA HILLS", "insp_2023": 23, "insp_2024": 14, "insp_2025": 13, "vr_2023": 17.4, "vr_2024": 28.6, "vr_2025": 23.1, "insp_2023_janSep": 19, "vr_combined": 22.0, "small_sample": false}, {"city": "LA CRESCENTA", "insp_2023": 23, "insp_2024": 20, "insp_2025": 38, "vr_2023": 0.0, "vr_2024": 0.0, "vr_2025": 2.6, "insp_2023_janSep": 13, "vr_combined": 1.2, "small_sample": false}, {"city": "MONTROSE", "insp_2023": 23, "insp_2024": 14, "insp_2025": 24, "vr_2023": 0.0, "vr_2024": 0.0, "vr_2025": 4.2, "insp_2023_janSep": 6, "vr_combined": 1.6, "small_sample": false}, {"city": "HAWAIIAN GARDENS", "insp_2023": 20, "insp_2024": 6, "insp_2025": 6, "vr_2023": 15.0, "vr_2024": 50.0, "vr_2025": 66.7, "insp_2023_janSep": 15, "vr_combined": 31.2, "small_sample": true}, {"city": "SANTA CLARITA", "is_aggregate": true, "insp_2023": 158, "insp_2024": 161, "insp_2025": 33, "insp_2023_janSep": 71, "vr_2023": 51.3, "vr_2024": 64.0, "vr_2025": 75.8, "vr_combined": 59.4, "small_sample": false, "children": [{"name": "Newhall", "insp_2023": 45, "insp_2024": 85, "insp_2025": 4, "insp_2023_janSep": 22, "vr_2023": 42.2, "vr_2024": 69.4, "vr_2025": 50.0, "vr_combined": 59.7, "total": 134, "small_sample": false}, {"name": "Canyon Country", "insp_2023": 69, "insp_2024": 47, "insp_2025": 8, "insp_2023_janSep": 25, "vr_2023": 47.8, "vr_2024": 57.4, "vr_2025": 100.0, "vr_combined": 54.8, "total": 124, "small_sample": false}, {"name": "Valencia", "insp_2023": 26, "insp_2024": 16, "insp_2025": 12, "insp_2023_janSep": 14, "vr_2023": 69.2, "vr_2024": 62.5, "vr_2025": 75.0, "vr_combined": 68.5, "total": 54, "small_sample": false}], "hidden_children_note": "Santa Clarita (40)"}, {"city": "MALIBU", "insp_2023": 15, "insp_2024": 7, "insp_2025": 2, "vr_2023": 46.7, "vr_2024": 71.4, "vr_2025": 0.0, "insp_2023_janSep": 15, "vr_combined": 50.0, "small_sample": true}, {"city": "LA CANADA FLINTRIDGE", "insp_2023": 12, "insp_2024": 22, "insp_2025": 3, "vr_2023": 33.3, "vr_2024": 0.0, "vr_2025": 0.0, "insp_2023_janSep": 9, "vr_combined": 10.8, "small_sample": true}, {"city": "LA VERNE", "insp_2023": 11, "insp_2024": 1, "insp_2025": 0, "vr_2023": 18.2, "vr_2024": 100.0, "vr_2025": 0.0, "insp_2023_janSep": 4, "vr_combined": 25.0, "small_sample": true}, {"city": "CALABASAS", "insp_2023": 10, "insp_2024": 8, "insp_2025": 7, "vr_2023": 40.0, "vr_2024": 25.0, "vr_2025": 42.9, "insp_2023_janSep": 8, "vr_combined": 36.0, "small_sample": true}, {"city": "RANCHO PALOS VERDES", "insp_2023": 10, "insp_2024": 8, "insp_2025": 1, "vr_2023": 40.0, "vr_2024": 75.0, "vr_2025": 100.0, "insp_2023_janSep": 10, "vr_combined": 57.9, "small_sample": true}, {"city": "DUARTE", "insp_2023": 8, "insp_2024": 4, "insp_2025": 2, "vr_2023": 12.5, "vr_2024": 50.0, "vr_2025": 100.0, "insp_2023_janSep": 7, "vr_combined": 35.7, "small_sample": true}, {"city": "DIAMOND BAR", "insp_2023": 6, "insp_2024": 3, "insp_2025": 2, "vr_2023": 66.7, "vr_2024": 100.0, "vr_2025": 100.0, "insp_2023_janSep": 5, "vr_combined": 81.8, "small_sample": true}, {"city": "STEVENSON RANCH", "insp_2023": 4, "insp_2024": 5, "insp_2025": 6, "vr_2023": 75.0, "vr_2024": 100.0, "vr_2025": 100.0, "insp_2023_janSep": 1, "vr_combined": 93.3, "small_sample": true}, {"city": "WESTLAKE VILLAGE", "insp_2023": 3, "insp_2024": 4, "insp_2025": 3, "vr_2023": 100.0, "vr_2024": 100.0, "vr_2025": 33.3, "insp_2023_janSep": 3, "vr_combined": 80.0, "small_sample": true}];
+
+const COUNTY = {
+  city: 'All Neighborhoods',
+  insp_2023: 34617,
+  insp_2024: 8743,
+  insp_2025: 4725,
+  vr_2023: 32.0, vr_2024: 38.0, vr_2025: 42.0
+};
+
+let selectedCity = null;
+let expandedCity = null; // tracks which parent row is currently expanded (only one at a time)
+let sortKey = 'insp_2023';
+let sortAsc = false;
+let filterText = '';
+let chart = null;
+let currentData = COUNTY;
+
+function buildChart(d) {
+  currentData = d;
+  const ctx = document.getElementById('dualChart').getContext('2d');
+  if (chart) chart.destroy();
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: ['2023', '2024', '2025'],
+      datasets: [
+        {
+          label: 'Inspections',
+          data: [d.insp_2023, d.insp_2024, d.insp_2025],
+          borderColor: NAVY, backgroundColor: 'rgba(46,74,122,0.06)',
+          borderWidth: 3, pointBackgroundColor: NAVY, pointRadius: 7,
+          pointHoverRadius: 9, tension: 0, fill: true, yAxisID: 'y'
+        },
+        {
+          label: 'Violation Rate',
+          data: [d.vr_2023, d.vr_2024, d.vr_2025],
+          borderColor: ORANGE, backgroundColor: 'transparent',
+          borderWidth: 3, pointBackgroundColor: ORANGE, pointRadius: 7,
+          pointHoverRadius: 9, tension: 0, fill: false, yAxisID: 'y1'
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: {
+          label: ctx => ctx.dataset.label === 'Inspections'
+            ? 'Inspections: ' + ctx.parsed.y.toLocaleString()
+            : 'Violation Rate: ' + ctx.parsed.y.toFixed(1) + '%'
+        }}
+      },
+      scales: {
+        x: { ticks: { color: '#9DA3AE', font: { size: 13, family: 'IBM Plex Sans' } }, grid: { display: false }, border: { display: false } },
+        y: { type: 'linear', position: 'left',
+          title: { display: true, text: 'Number of Inspections', color: NAVY, font: { size: 11, family: 'IBM Plex Sans' } },
+          ticks: { color: NAVY, font: { size: 12, family: 'IBM Plex Sans' }, callback: v => v >= 10000 ? Math.round(v/1000)+'K' : v.toLocaleString() },
+          grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: false } },
+        y1: { type: 'linear', position: 'right', min: 0,
+          title: { display: true, text: 'Violation Rate (%)', color: ORANGE, font: { size: 11, family: 'IBM Plex Sans' } },
+          ticks: { color: ORANGE, font: { size: 12, family: 'IBM Plex Sans' }, callback: v => v + '%' },
+          grid: { display: false }, border: { display: false } }
+      },
+      layout: { padding: { top: 40, bottom: 4, left: 60, right: 70 } }
+    },
+    plugins: [{
+      id: 'datalabels',
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        const cd = currentData;
+        const inspVals = [cd.insp_2023, cd.insp_2024, cd.insp_2025];
+        const vrVals = [cd.vr_2023, cd.vr_2024, cd.vr_2025];
+        const chartArea = chart.chartArea;
+
+        function drawLabel(text, x, y, color, align) {
+          ctx.save();
+          ctx.font = '600 12px IBM Plex Sans, sans-serif';
+          ctx.textAlign = align;
+          ctx.textBaseline = 'middle';
+          const w = ctx.measureText(text).width;
+          const pad = 4;
+          const bx = align === 'left' ? x - pad : align === 'right' ? x - w - pad : x - w/2 - pad;
+          // Draw white background pill
+          ctx.fillStyle = 'rgba(255,255,255,0.92)';
+          ctx.beginPath();
+          ctx.roundRect(bx, y - 9, w + pad*2, 18, 4);
+          ctx.fill();
+          // Draw text
+          ctx.fillStyle = color;
+          ctx.fillText(text, x, y);
+          ctx.restore();
+        }
+
+        // Draw inspection labels above each point
+        const inspMeta = chart.getDatasetMeta(0);
+        inspVals.forEach((val, i) => {
+          const pt = inspMeta.data[i];
+          const align = i === 0 ? 'left' : i === 2 ? 'right' : 'center';
+          const xOff = i === 0 ? 6 : i === 2 ? -6 : 0;
+          // Place above point, but not above chart area
+          const y = Math.max(chartArea.top + 14, pt.y - 18);
+          drawLabel(val.toLocaleString(), pt.x + xOff, y, NAVY, align);
+        });
+
+        // Draw violation rate labels below each point
+        const vrMeta = chart.getDatasetMeta(1);
+        vrVals.forEach((val, i) => {
+          const pt = vrMeta.data[i];
+          const align = i === 0 ? 'left' : i === 2 ? 'right' : 'center';
+          const xOff = i === 0 ? 6 : i === 2 ? -6 : 0;
+          // Place below point, but not below chart area
+          const y = Math.min(chartArea.bottom - 14, pt.y + 20);
+          drawLabel(val.toFixed(1) + '%', pt.x + xOff, y, ORANGE, align);
+        });
+      }
+    }]
+  });
+}
+
+function vrClass(rate) {
+  if (rate < 30) return 'vr-low';
+  if (rate < 60) return 'vr-mid';
+  return 'vr-high';
+}
+
+// Design 3 sample-size tier rendering:
+// <10 inspections: suppress rate, show raw count in italic gray
+// 10-49 inspections: show rate with ⚠ warning
+// 50+ inspections: show rate normally
+function renderRateCell(rate, inspCount, opts) {
+  opts = opts || {};
+  const extraStyle = opts.combinedCell ? ' style="background:var(--gray-50);border-left:0.5px solid var(--gray-300);"' : '';
+  const pillStyle = opts.combinedCell ? ' style="font-weight:600;"' : '';
+
+  if (inspCount < 10) {
+    return '<td' + extraStyle + '><span style="color:var(--gray-600);font-style:italic;font-size:11px;">' + inspCount + (inspCount === 1 ? ' inspection' : ' inspections') + '</span></td>';
+  }
+  const warning = (inspCount < 50)
+    ? ' <span title="' + inspCount + ' inspections, rate volatile, interpret with caution" style="color:#92400E;font-size:10px;cursor:help;">⚠</span>'
+    : '';
+  return '<td' + extraStyle + '><span class="vr-pill ' + vrClass(rate) + '"' + pillStyle + '>' + rate.toFixed(1) + '%</span>' + warning + '</td>';
+}
+
+function titleCase(str) {
+  const exceptions = ['of', 'the', 'and', 'de', 'la', 'del', 'el'];
+  return str.toLowerCase().split(' ').map((word, i) => {
+    if (i === 0 || !exceptions.includes(word)) {
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    }
+    return word;
+  }).join(' ');
+}
+
+function renderTable() {
+  // Filter: match top-level cities by name OR match a child name (auto-expanding the parent)
+  const q = filterText.toLowerCase();
+  let autoExpandParent = null;
+  const filtered = ALL_DATA.filter(d => {
+    if (d.city.toLowerCase().includes(q)) return true;
+    if (d.children) {
+      const childMatch = d.children.some(c => c.name.toLowerCase().includes(q));
+      if (childMatch && q) autoExpandParent = d.city;
+      return childMatch;
+    }
+    return false;
+  });
+  // If a child matched the search, auto-expand its parent for this render
+  const effectiveExpanded = autoExpandParent || expandedCity;
+
+  const sorted = [...filtered].sort((a, b) => {
+    const av = a[sortKey], bv = b[sortKey];
+    if (typeof av === 'string') return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+    return sortAsc ? av - bv : bv - av;
+  });
+  const tbodyInsp = document.getElementById('tableBodyInsp');
+  const tbodyVR = document.getElementById('tableBodyVR');
+  tbodyInsp.innerHTML = '';
+  tbodyVR.innerHTML = '';
+  let visibleCount = 0;
+  sorted.forEach(d => {
+    const selectedClass = (selectedCity === d.city) ? 'selected' : '';
+    const isParent = !!d.children;
+    const isExpanded = isParent && (effectiveExpanded === d.city);
+    const chevron = isParent ? '<span class="chevron">▸</span>' : '';
+    const parentClasses = [isParent ? 'parent-row' : '', isExpanded ? 'expanded' : '', selectedClass].filter(x => x).join(' ');
+
+    // Parent row in Inspection Activity table
+    const trInsp = document.createElement('tr');
+    if (parentClasses) trInsp.className = parentClasses;
+    trInsp.innerHTML =
+      '<td>' + chevron + titleCase(d.city) + '</td>' +
+      '<td>' + d.insp_2023.toLocaleString() + '</td>' +
+      '<td>' + d.insp_2024.toLocaleString() + '</td>' +
+      '<td>' + d.insp_2025.toLocaleString() + '</td>';
+    trInsp.addEventListener('click', () => handleRowClick(d));
+    tbodyInsp.appendChild(trInsp);
+
+    // Parent row in Violation Rates table
+    const trVR = document.createElement('tr');
+    if (parentClasses) trVR.className = parentClasses;
+    const parentTotal = d.insp_2023 + d.insp_2024 + d.insp_2025;
+    trVR.innerHTML =
+      '<td>' + chevron + titleCase(d.city) + '</td>' +
+      renderRateCell(d.vr_2023, d.insp_2023) +
+      renderRateCell(d.vr_2024, d.insp_2024) +
+      renderRateCell(d.vr_2025, d.insp_2025) +
+      renderRateCell(d.vr_combined, parentTotal, {combinedCell: true});
+    trVR.addEventListener('click', () => handleRowClick(d));
+    tbodyVR.appendChild(trVR);
+    visibleCount++;
+
+    // Render children if this parent is expanded
+    if (isExpanded) {
+      d.children.forEach(child => {
+        const childKey = d.city + ':' + child.name;
+        const childSelectedClass = (selectedCity === childKey) ? 'selected' : '';
+
+        const trChildInsp = document.createElement('tr');
+        trChildInsp.className = ['child-row', childSelectedClass].filter(x => x).join(' ');
+        trChildInsp.innerHTML =
+          '<td>' + child.name + '</td>' +
+          '<td>' + child.insp_2023.toLocaleString() + '</td>' +
+          '<td>' + child.insp_2024.toLocaleString() + '</td>' +
+          '<td>' + child.insp_2025.toLocaleString() + '</td>';
+        trChildInsp.addEventListener('click', (e) => { e.stopPropagation(); handleChildClick(d, child); });
+        tbodyInsp.appendChild(trChildInsp);
+
+        const childTotal = child.insp_2023 + child.insp_2024 + child.insp_2025;
+        const trChildVR = document.createElement('tr');
+        trChildVR.className = ['child-row', childSelectedClass].filter(x => x).join(' ');
+        trChildVR.innerHTML =
+          '<td>' + child.name + '</td>' +
+          renderRateCell(child.vr_2023, child.insp_2023) +
+          renderRateCell(child.vr_2024, child.insp_2024) +
+          renderRateCell(child.vr_2025, child.insp_2025) +
+          renderRateCell(child.vr_combined, childTotal, {combinedCell: true});
+        trChildVR.addEventListener('click', (e) => { e.stopPropagation(); handleChildClick(d, child); });
+        tbodyVR.appendChild(trChildVR);
+      });
+
+      // Show hidden-children note if this parent has any
+      const note = document.getElementById('hiddenChildrenNote');
+      if (note && d.hidden_children_note) {
+        const hiddenCount = d.hidden_children_note.split(';').length;
+        const parentDisplay = titleCase(d.city);
+        const noun = parentDisplay.endsWith('s') ? 'neighborhoods' : (parentDisplay + ' neighborhoods');
+        note.innerHTML = '<strong>' + hiddenCount + ' ' + parentDisplay + ' areas with fewer than 50 inspections are included in the ' + parentDisplay + ' aggregate but not shown individually:</strong> ' + d.hidden_children_note + '.';
+        note.classList.add('show');
+      }
+    }
+  });
+
+  // Hide the hidden-children note if nothing is expanded
+  if (!effectiveExpanded) {
+    const note = document.getElementById('hiddenChildrenNote');
+    if (note) note.classList.remove('show');
+  }
+
+  document.getElementById('tableCount').textContent = 'Showing ' + visibleCount + ' of ' + ALL_DATA.length + ' cities';
+}
+
+function handleRowClick(d) {
+  if (d.children) {
+    // Toggle expansion
+    if (expandedCity === d.city) {
+      expandedCity = null;
+    } else {
+      expandedCity = d.city;
+    }
+  }
+  // Also select for chart filter
+  selectCity(d);
+}
+
+function changeStatHtml(base, insp2025){
+  // base = Jan-Sep 2023 inspections; insp2025 = Jan-Sep 2025 inspections.
+  // Matches the page's existing sample-size rule: under 10 = suppress the percent and show counts;
+  // 10-49 = show percent with a small-sample warning; 50+ = show percent clean.
+  // Direction is carried by the +/- sign and the word fell/rose, not by color, to match the page's restraint.
+  var tip = 'Compares January through September 2023 to January through September 2025, a consistent 9-month window on both sides.';
+  if(!base || base <= 0){
+    return '<div class="city-stat"><div class="city-stat-val">N/A</div><div class="city-stat-label" title="'+tip+'">Change in housing inspections, 2023 to 2025</div></div>';
+  }
+  var pct = Math.round((insp2025 - base) / base * 100); // positive = rose, negative = fell
+  var rose = pct >= 0;
+  if(base < 50){
+    var dir = rose ? 'Rose' : 'Fell';
+    return '<div class="city-stat"><div class="city-stat-val chg-warn" title="Only '+base+' inspections in the Jan-Sep 2023 baseline, too few for a reliable percentage.">'+dir+' &#9888;</div><div class="city-stat-label" title="'+tip+' Sample too small ('+base+' in baseline) for a reliable percentage; raw counts shown.">Change, 2023 to 2025 ('+base+' &rarr; '+insp2025+')</div></div>';
+  }
+  var sign = rose ? '+' : '-';
+  var dirClass = rose ? 'chg-up' : 'chg-down';
+  return '<div class="city-stat"><div class="city-stat-val '+dirClass+'" title="'+tip+'">'+sign+Math.abs(pct)+'%</div><div class="city-stat-label" title="'+tip+'">Change in housing inspections, 2023 to 2025</div></div>';
+}
+
+function handleChildClick(parent, child) {
+  // Build a pseudo-row for chart filtering: child data + key for selection
+  const childKey = parent.city + ':' + child.name;
+  const childData = Object.assign({}, child, { city: childKey, displayCity: child.name });
+  if (selectedCity === childKey) {
+    selectedCity = null;
+    document.getElementById('cityBanner').style.display = 'none';
+    document.getElementById('chartTitle').textContent = 'Inspection and Violation Rate Trends Across LA County';
+    document.getElementById('chartSubtitle').textContent = 'Showing LA County totals. Click any neighborhood below to filter.';
+    buildChart(COUNTY);
+  } else {
+    selectedCity = childKey;
+    document.getElementById('chartTitle').textContent = child.name + ': Inspection Trends and Violation Rate';
+    document.getElementById('chartSubtitle').textContent = 'Click the same row again to return to countywide view';
+    const totalInsp = child.insp_2023 + child.insp_2024 + child.insp_2025;
+    const base = child.insp_2023_janSep || 0;
+    document.getElementById('bannerCity').textContent = child.name;
+    document.getElementById('bannerStats').innerHTML =
+      '<div class="city-stat"><div class="city-stat-val">' + totalInsp.toLocaleString() + '</div><div class="city-stat-label">Housing inspections</div></div>' +
+      changeStatHtml(base, child.insp_2025) +
+      '<div class="city-stat"><div class="city-stat-val" title="Calculated from raw counts: total inspections with violations across 2023, 2024, and 2025 divided by total inspections in the same period.">' + child.vr_combined.toFixed(1) + '%</div><div class="city-stat-label" title="Share of housing inspections that found at least one violation, pooled across 2023 to 2025 from raw counts.">Inspections finding a violation, 2023 to 2025</div></div>';
+    document.getElementById('cityBanner').style.display = 'flex';
+    buildChart(childData);
+  }
+  renderTable();
+}
+
+function clearCitySelection() {
+  selectedCity = null;
+  document.getElementById('cityBanner').style.display = 'none';
+  document.getElementById('chartTitle').textContent = 'Inspection and Violation Rate Trends Across LA County';
+  document.getElementById('chartSubtitle').textContent = 'Showing LA County totals. Click any neighborhood below to filter.';
+  buildChart(COUNTY);
+  renderTable();
+}
+
+function selectCity(d) {
+  if (selectedCity === d.city) {
+    selectedCity = null;
+    document.getElementById('cityBanner').style.display = 'none';
+    document.getElementById('chartTitle').textContent = 'Inspection and Violation Rate Trends Across LA County';
+    document.getElementById('chartSubtitle').textContent = 'Showing LA County totals. Click any neighborhood below to filter.';
+    buildChart(COUNTY);
+  } else {
+    selectedCity = d.city;
+    const name = titleCase(d.city);
+    document.getElementById('chartTitle').textContent = name + ': Inspection Trends and Violation Rate';
+    document.getElementById('chartSubtitle').textContent = 'Click the same row again to return to countywide view';
+    document.getElementById('bannerCity').textContent = name;
+    const totalInsp = d.insp_2023 + d.insp_2024 + d.insp_2025;
+    const base = d.insp_2023_janSep || 0;
+    document.getElementById('bannerStats').innerHTML =
+      '<div class="city-stat"><div class="city-stat-val">' + totalInsp.toLocaleString() + '</div><div class="city-stat-label">Housing inspections</div></div>' +
+      changeStatHtml(base, d.insp_2025) +
+      '<div class="city-stat"><div class="city-stat-val" title="Calculated from raw counts: total inspections with violations across 2023, 2024, and 2025 divided by total inspections in the same period. Not an average of yearly percentages.">' + d.vr_combined.toFixed(1) + '%</div><div class="city-stat-label" title="Share of housing inspections that found at least one violation, pooled across 2023 to 2025 from raw counts. Not an average of yearly percentages.">Inspections finding a violation, 2023 to 2025</div></div>';
+    document.getElementById('cityBanner').style.display = 'flex';
+    buildChart(d);
+  }
+  renderTable();
+}
+
+// Set up sort arrows: every sortable header gets a .sort-arrow span.
+// On render, update it to ↓ (descending), ↑ (ascending), or ↕ (inactive).
+function updateSortArrows() {
+  document.querySelectorAll('.data-table th[onclick]').forEach(th => {
+    // Find or create the .sort-arrow span
+    let arrow = th.querySelector('.sort-arrow');
+    if (!arrow) {
+      // Remove any existing inline arrow character and replace with a span
+      th.innerHTML = th.innerHTML.replace(/\s*↕\s*$|\s*↓\s*$|\s*↑\s*$/, '') + ' <span class="sort-arrow"></span>';
+      arrow = th.querySelector('.sort-arrow');
+    }
+    const headerKey = th.id.replace(/^th-/, '').replace(/-vr$/, '');
+    const isActive = (headerKey === sortKey) || (sortKey === 'city' && (th.id === 'th-city' || th.id === 'th-city-vr'));
+    if (isActive) {
+      arrow.textContent = sortAsc ? '↑' : '↓';
+      arrow.style.color = 'var(--navy)';
+      arrow.style.fontWeight = '700';
+    } else {
+      arrow.textContent = '↕';
+      arrow.style.color = 'var(--gray-400)';
+      arrow.style.fontWeight = '400';
+    }
+  });
+}
+
+function sortTable(key) {
+  if (sortKey === key) sortAsc = !sortAsc;
+  else { sortKey = key; sortAsc = false; }
+  document.querySelectorAll('.data-table th').forEach(th => th.classList.remove('sorted'));
+  // Highlight the sorted column in whichever table it belongs to
+  const primary = document.getElementById('th-' + key);
+  if (primary) primary.classList.add('sorted');
+  // If sorting by 'city', also highlight the matching header in the other table
+  if (key === 'city') {
+    const cityVR = document.getElementById('th-city-vr');
+    if (cityVR) cityVR.classList.add('sorted');
+  }
+  updateSortArrows();
+  renderTable();
+}
+
+document.getElementById('searchInput').addEventListener('input', e => {
+  filterText = e.target.value;
+  renderTable();
+});
+
+buildChart(COUNTY);
+updateSortArrows();
+renderTable();
+</script>
+</body>
+</html>

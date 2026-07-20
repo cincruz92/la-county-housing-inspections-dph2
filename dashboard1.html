@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LA County Housing Inspections and Violations Analysis - The Decline</title>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@300;400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; outline: none !important; }
+  :root {
+    --navy: #2E4A7A;
+    --navy-light: #EEF2F8;
+    --orange: #E8873A;
+    --accent: #2E4A7A;
+    --accent-light: #EEF2F8;
+    --white: #FFFFFF;
+    --gray-50: #F7F8FA; --gray-100: #F0F2F6;
+    --gray-200: #EAECF0;
+    --gray-400: #9DA3AE;
+    --gray-600: #6B7280;
+    --gray-700: #374151;
+    --gray-900: #111827;
+    --font-display: 'Source Serif 4', serif;
+    --font-body: 'IBM Plex Sans', sans-serif;
+    --radius: 12px;
+    --shadow: 0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.05);
+  }
+  html, body { font-family: var(--font-body); font-size: 15px; background: var(--gray-100); color: var(--gray-900); min-height: 100vh; }
+
+  /* HEADER */
+  .db-header { background: transparent; max-width: 1200px; margin: 0 auto; padding: 32px 40px 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .db-label { font-size: 11px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: #9DA3AE; margin-bottom: 6px; }
+  .db-title { font-family: var(--font-display); font-size: 26px; font-weight: 600; color: var(--navy); line-height: 1.25; }
+  .db-badge { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22); color: rgba(255,255,255,0.8); font-size: 12px; padding: 5px 14px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; outline: none !important; cursor: default; user-select: none; pointer-events: none; }
+
+  /* BODY - shared max-width for all sections */
+  .db-body { max-width: 1200px; margin: 0 auto; padding: 30px 40px 20px; }
+  .db-footer { max-width: 1200px; margin: 0 auto; padding: 16px 40px 40px; display: flex; justify-content: space-between; align-items: center; }
+  .footer-source { font-size: 11px; color: var(--gray-400); }
+  .footer-source a { color: var(--gray-400); text-decoration: underline; }
+  .footer-note { font-size: 11px; color: var(--gray-400); font-style: italic; }
+
+  /* METRIC CARDS */
+  .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; width: 100%; }
+  .metric-card { background: var(--white); border-radius: var(--radius); border: 1px solid var(--gray-200); padding: 20px 22px 18px; box-shadow: var(--shadow); display: flex; flex-direction: column; transition: transform 0.15s ease, box-shadow 0.15s ease; min-width: 0; }
+  .metric-card:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(46,74,122,0.13); }
+  .metric-top { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .metric-icon { width: 34px; height: 34px; background: var(--navy-light); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .metric-icon svg { width: 17px; height: 17px; stroke: var(--navy); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .metric-label { font-size: 12px; font-weight: 400; color: var(--gray-600); line-height: 1.4; }
+  .metric-value { font-family: var(--font-display); font-size: 36px; font-weight: 600; color: var(--navy); line-height: 1; margin-bottom: 6px; letter-spacing: -0.5px; }
+  .metric-sub { font-size: 12px; color: var(--gray-400); }
+  .metric-sparkline { margin-top: 10px; }
+  .spark-gradient { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+
+  /* CALLOUT */
+  .callout-b { border-left: 4px solid var(--navy); padding: 16px 22px; margin-bottom: 20px; background: var(--navy-light); border-radius: 0 var(--radius) var(--radius) 0; display: flex; align-items: center; gap: 28px; width: 100%; }
+  .callout-stats { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+  .callout-stat { text-align: center; }
+  .callout-num { font-family: var(--font-display); font-size: 24px; font-weight: 600; color: var(--navy); margin: 0; line-height: 1; }
+  .callout-num.highlight { color: var(--accent, #2E4A7A); }
+  .callout-yr { font-size: 12px; color: var(--gray-400); margin: 4px 0 0; }
+  .callout-arrow { font-size: 20px; color: var(--navy); opacity: 0.5; }
+  .callout-divider { width: 1px; height: 48px; background: rgba(46,74,122,0.2); flex-shrink: 0; }
+  .callout-text-wrap { flex: 1; }
+  .callout-pct { font-family: var(--font-display); font-size: 28px; font-weight: 600; color: var(--accent, #2E4A7A); margin: 0 10px 0 0; display: inline; line-height: 1; }
+  .callout-title { font-family: var(--font-display); font-size: 22px; font-weight: 600; color: var(--navy); display: inline; }
+  .callout-body { font-size: 13px; color: var(--gray-900); line-height: 1.6; margin: 4px 0 0; }
+
+  /* CHART CARDS */
+  .chart-card { background: var(--white); border-radius: var(--radius); border: 1px solid var(--gray-200); padding: 26px 28px 20px; box-shadow: var(--shadow); margin-bottom: 20px; width: 100%; }
+  .chart-header { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 22px; }
+  .chart-icon { width: 20px; height: 20px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .chart-icon svg { width: 18px; height: 18px; stroke: var(--navy); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block; }
+  .chart-title { font-family: var(--font-display); font-size: 22px; font-weight: 600; color: var(--navy); text-align: center; }
+  .chart-wrap { position: relative; width: 100%; height: 240px; }
+  .axis-label-x { text-align: center; font-size: 12px; color: var(--gray-400); margin-top: 8px; }
+
+  /* SEVERITY */
+  .severity-card { background: var(--white); border-radius: var(--radius); border: 1px solid var(--gray-200); padding: 26px 32px; box-shadow: var(--shadow); margin-bottom: 20px; width: 100%; }
+  .severity-title { font-family: var(--font-display); font-size: 22px; font-weight: 600; color: var(--navy); margin-bottom: 6px; text-align: center; }
+  .severity-intro { font-size: 15px; color: var(--gray-700); text-align: center; margin-bottom: 22px; font-weight: 400; }
+  .severity-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .sev-box { background: var(--gray-50); border-radius: 10px; border: 1px solid var(--gray-200); padding: 20px 18px; text-align: center; }
+  .sev-box.sev-mid { background: #FCEBEB; border-color: rgba(163,45,45,0.18); }
+  .sev-pct { font-family: var(--font-display); font-size: 40px; font-weight: 600; line-height: 1; margin-bottom: 6px; }
+  .sev-label { font-size: 13px; font-weight: 500; color: var(--gray-700); margin-bottom: 8px; }
+  .sev-desc { font-size: 12px; color: var(--gray-700); line-height: 1.5; }
+
+  /* IMPLICATION SECTION (Layout D) */
+  .impl-card { background: var(--navy-light); border: 1px solid #D0D5DD; border-left: 4px solid var(--navy); border-radius: 4px; box-shadow: 0 1px 3px rgba(16,24,40,0.08), 0 1px 2px rgba(16,24,40,0.06); padding: 32px 36px; margin-bottom: 20px; width: 100%; }
+  .impl-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gray-600); margin-bottom: 16px; }
+  .impl-lede { font-size: 16px; font-weight: 600; color: var(--navy); line-height: 1.55; margin-bottom: 18px; }
+  .impl-p { font-size: 13.5px; color: var(--gray-900); line-height: 1.7; margin-bottom: 18px; }
+  .impl-p strong { color: var(--navy); font-weight: 600; }
+  .impl-zone { background: var(--white); border-radius: 8px; padding: 18px 20px; margin: 20px 0; }
+  .impl-zone-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gray-600); margin-bottom: 12px; }
+  .impl-law-row { display: grid; grid-template-columns: 130px 1fr; gap: 14px; font-size: 13px; line-height: 1.6; color: var(--gray-900); padding: 10px 0; border-bottom: 0.5px solid var(--gray-200); }
+  .impl-law-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .impl-law-row:first-child { padding-top: 0; }
+  .impl-law-date { font-weight: 500; color: var(--gray-600); font-size: 11px; }
+  .impl-law-text strong { font-weight: 500; color: var(--gray-900); }
+  .impl-law-text a { color: var(--navy); text-decoration: underline; text-decoration-color: rgba(46,74,122,0.3); text-underline-offset: 2px; transition: text-decoration-color 0.15s ease; }
+  .impl-law-text a:hover { text-decoration-color: var(--navy); }
+  .impl-synth { font-family: var(--font-display); font-size: 17px; font-weight: 600; color: var(--navy); line-height: 1.5; padding: 16px 18px; background: rgba(255,255,255,0.55); border-radius: 8px; margin: 4px 0 18px; }
+  .impl-note { font-size: 12.5px; color: var(--gray-600); line-height: 1.65; margin-bottom: 12px; }
+  .impl-note:last-of-type { margin-bottom: 0; }
+  .impl-q-zone { background: #1E5A96; border-radius: 10px; padding: 20px 22px; margin: 22px 0 16px; }
+  .impl-q-zone-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(255,255,255,0.6); margin-bottom: 12px; }
+  .impl-q-item { font-size: 15px; font-weight: 500; color: var(--white); line-height: 1.5; margin-bottom: 10px; }
+  .impl-q-item:last-child { margin-bottom: 0; }
+  .impl-audience { display: flex; align-items: flex-start; gap: 10px; background: var(--white); border-radius: 8px; padding: 14px 16px; font-size: 12px; color: var(--gray-700); line-height: 1.6; }
+  .impl-audience-icon { width: 22px; height: 22px; border-radius: 50%; background: var(--navy-light); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--navy); font-weight: 600; }
+  .impl-audience-body { display: flex; flex-direction: column; gap: 4px; }
+  .impl-audience-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gray-400); }
+
+  /* style match: lookup-tool research-card treatment (hairline, no shadow) */
+  .metric-card,.chart-card,.severity-card{box-shadow:0 1px 3px rgba(16,24,40,0.08), 0 1px 2px rgba(16,24,40,0.06);border:1px solid #D0D5DD;border-radius:4px;}
+
+    /* VALIDATION CARD */
+    .val-card{background:var(--white);border:0.5px solid #D0D5DD;border-radius:4px;padding:30px 32px;margin-bottom:20px;width:100%;}
+    .val-eyebrow{font-size:12px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--gray-400);margin:0 0 8px;}
+    .val-title{font-family:var(--font-display);font-weight:600;color:var(--navy);font-size:22px;line-height:1.25;margin:0 0 18px;}
+    .val-card p{font-size:15px;line-height:1.7;color:var(--gray-700);margin:0 0 14px;}
+    .val-callout{background:var(--navy-light);border:0.5px solid #D0D5DD;border-radius:4px;padding:18px 20px;margin:20px 0 6px;}
+    .val-callout-label{font-size:12px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--navy);margin:0 0 12px;}
+    .val-row{display:flex;justify-content:space-between;align-items:baseline;gap:18px;padding:8px 0;border-top:0.5px solid #D0D5DD;font-size:14px;color:var(--gray-700);}
+    .val-row:first-of-type{border-top:none;}
+    .val-row .v{font-weight:600;color:var(--navy);white-space:nowrap;font-variant-numeric:tabular-nums;}
+    .val-fwd{font-size:13px;color:var(--gray-600);margin-top:18px;padding-top:14px;border-top:0.5px solid #D0D5DD;}
+    .val-card details[open] .val-summary-hint{display:none;}
+    .val-card summary{list-style:none;cursor:pointer;outline:none;}
+    .val-card summary::-webkit-details-marker{display:none;}
+    .val-summary-row{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;}
+    .val-summary-left{flex:1;}
+    .val-summary-hint{font-size:13px;color:var(--gray-600);margin-top:6px;font-weight:400;}
+    .val-chevron{flex-shrink:0;font-size:13px;color:var(--navy);font-weight:600;white-space:nowrap;margin-top:24px;}
+    .val-card details[open] .val-chevron .closed-txt{display:none;}
+    .val-card details:not([open]) .val-chevron .open-txt{display:none;}
+    .val-card details[open] .val-title{margin-bottom:18px;}
+    .val-card details summary .val-title{margin-bottom:0;}
+  
+  /* ===== Mobile (added June 2026): no effect above 700px ===== */
+  @media (max-width: 700px) {
+    .db-header { padding: 24px 16px 0; }
+    .db-title { font-size: 21px; }
+    .db-body { padding: 22px 16px 16px; }
+    .metrics-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .severity-grid { grid-template-columns: 1fr; gap: 10px; }
+    .impl-law-row { grid-template-columns: 1fr; }
+    .callout-b { flex-wrap: wrap; }
+    .callout-stats { flex-wrap: wrap; }
+    .callout-divider { display: none; }
+    .db-footer { flex-direction: column; align-items: flex-start; gap: 6px; padding: 14px 16px 28px; }
+  }
+</style>
+</head>
+<body>
+<!-- PORTFOLIO NAVIGATION -->
+<div style="background:#1E3560;padding:12px 40px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+  <a href="index.html" style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);text-decoration:none;white-space:nowrap;letter-spacing:0.06em;text-transform:uppercase;display:flex;align-items:center;gap:6px;">&#8592; Portfolio Home</a>
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <a href="dashboard0.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Start Here</a>
+    <a href="dashboard1.html" style="font-size:12px;font-weight:600;color:#ffffff;background:rgba(255,255,255,0.22);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.5);">The Decline</a>
+    <a href="dashboard2.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Violations by Area</a>
+    <a href="dashboard3.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Property Types</a>
+    <a href="dashboard6.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Look Up a Property</a>
+    <a href="dashboard4.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Equity</a>
+    <a href="methods.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Methods</a>
+    <a href="dashboard5.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Limitations</a>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div class="db-header">
+  <div>
+    <p class="db-label">The Decline</p>
+    <h1 class="db-title">Inspections Fell 82% While Violation Rates Climbed</h1>
+  </div>
+  
+</div>
+
+<!-- BODY -->
+<div class="db-body">
+
+  <!-- METRIC CARDS -->
+  <div class="metrics-grid">
+    <div class="metric-card">
+      <div class="metric-top">
+        <div class="metric-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+        <span class="metric-label">Total Housing Inspections</span>
+      </div>
+      <div class="metric-value">48,085</div>
+      <div class="metric-sub">Routine only · 289 ZIPs</div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-top">
+        <div class="metric-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+        <span class="metric-label">Inspections With Violations</span>
+      </div>
+      <div class="metric-value">16,279</div>
+      <div class="metric-sub">34% of all inspections</div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-top">
+        <div class="metric-icon"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+        <span class="metric-label">Total Housing Violations</span>
+      </div>
+      <div class="metric-value">37,026</div>
+      <div class="metric-sub">Matched to inspections</div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-top">
+        <div class="metric-icon"><svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
+        <span class="metric-label">Avg Violations Per Inspection With Violations</span>
+      </div>
+      <div class="metric-value">2.60</div>
+      <div class="metric-sub">Up from 2.23 in 2023</div>
+      <div class="metric-sparkline">
+        <div class="spark-gradient">
+          <span style="font-size:10px;color:var(--gray-400);">2023</span>
+          <div style="flex:1;height:2px;background:linear-gradient(to right,var(--navy),var(--accent,#2E4A7A));border-radius:1px;"></div>
+          <span style="font-size:10px;color:var(--gray-400);">2025</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CALLOUT B -->
+  <div class="callout-b">
+    <div class="callout-stats">
+      <div class="callout-stat"><p class="callout-num">2.23</p><p class="callout-yr">2023</p></div>
+      <span class="callout-arrow">→</span>
+      <div class="callout-stat"><p class="callout-num">2.28</p><p class="callout-yr">2024</p></div>
+      <span class="callout-arrow">→</span>
+      <div class="callout-stat"><p class="callout-num highlight">2.60</p><p class="callout-yr">2025</p></div>
+    </div>
+    <div class="callout-divider"></div>
+    <div class="callout-text-wrap">
+      <p style="margin:0 0 4px;"><span class="callout-pct">+17%</span><span class="callout-title">More violations found per inspection</span></p>
+      <p class="callout-body">Each inspection found more violations in 2025 than in 2023, even as the total number of inspections fell 82%. Fewer inspections, more problems found per visit.</p>
+    </div>
+  </div>
+
+  <!-- LINE CHART -->
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="chart-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+      <h2 class="chart-title">Housing Inspections Declined 82% in the First Nine Months, 2023 to 2025</h2>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="lineChart" role="img" aria-label="Line chart showing housing routine inspections declining from 34,617 in 2023 to 8,743 in 2024 to 4,725 in 2025, an 82% decline over the inspection period"></canvas>
+    </div>
+    <p class="axis-label-x">Housing Inspection Year</p>
+  </div>
+
+  <!-- VALIDATION -->
+        <div class="val-card">
+          <details>
+            <summary>
+              <div class="val-summary-row">
+                <div class="val-summary-left">
+                  <div class="val-eyebrow">Validation</div>
+                  <div class="val-title">A second download reproduces these numbers</div>
+                  <div class="val-summary-hint">How I confirmed the decline is real and not an incomplete download. Click to expand.</div>
+                </div>
+                <div class="val-chevron"><span class="closed-txt">Show ▾</span><span class="open-txt">Hide ▴</span></div>
+              </div>
+            </summary>
+            <div style="margin-top:18px;">
+              <p>To confirm the decline was real and not the result of an incomplete download, I compared two separate extracts of the same County dataset. The analysis uses the first extract, downloaded in February 2026, covering January 2023 through September 2025. The second extract runs through March 2026, so it was necessarily pulled later. Over the period they share, April 2023 through September 2025, the two are identical: the same 36,835 routine inspections, agreeing in every one of the 30 months, down to the same individual records. Because the later extract was pulled roughly six months after the analysis window closed, any inspections still being entered for the declining period had time to appear in it. None did. The decline is in the data, not in the timing of the download.</p>
+              <p>One limit is worth stating directly. The second extract begins in April 2023, so the first quarter of 2023, about 11,250 inspections and 42 percent of the baseline, exists only in the first extract and could not be cross-checked. This does not change the result. The full decline period was reproduced exactly, and on the months both extracts completely share, the decline measures 81.6 percent, essentially the headline figure.</p>
+              <div class="val-callout">
+                <div class="val-callout-label">The check, by the numbers</div>
+                <div class="val-row"><span>First extract (analysis source), routine inspections Apr 2023 to Sep 2025</span><span class="v">36,835</span></div>
+                <div class="val-row"><span>Second extract, same period</span><span class="v">36,835</span></div>
+                <div class="val-row"><span>Months in agreement</span><span class="v">all 30</span></div>
+                <div class="val-row"><span>Individual records found in both extracts</span><span class="v">36,835 of 36,835</span></div>
+                <div class="val-row"><span>Decline on the fully shared window (Apr to Sep, 2023 vs 2025)</span><span class="v">81.6%</span></div>
+              </div>
+              <div class="val-fwd">This same later extract carries the data through March 2026.</div>
+            </div>
+          </details>
+        </div>
+
+        <!-- SEVERITY -->
+  <div class="severity-card">
+    <h2 class="severity-title">Housing Violations by Severity</h2>
+    <p class="severity-intro">Of <strong>37,026</strong> violations, <strong>36,062</strong> are classified by severity:</p>
+    <div class="severity-grid">
+      <div class="sev-box">
+        <div class="sev-pct" style="color:#2E4A7A;">94%</div>
+        <div class="sev-label">Non-Critical</div>
+        <div class="sev-desc">General maintenance issues requiring correction</div>
+      </div>
+      <div class="sev-box sev-mid">
+        <div class="sev-pct" style="color:#A32D2D;">6%</div>
+        <div class="sev-label">Critical</div>
+        <div class="sev-desc">Serious habitability concerns requiring prompt action</div>
+      </div>
+    </div>
+    <p style="font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb;padding-top:10px;margin-top:14px;line-height:1.6;">964 additional records (2.6% of all 37,026 violations) are logged as <strong>out of compliance</strong>, a correction status rather than a severity level, and are not included in the chart above.</p>
+  </div>
+
+  <!-- WHAT THIS SUGGESTS (Layout C: lede + paragraph + dated law list + closing) -->
+  <div class="impl-card">
+    <div class="impl-label">What This Suggests</div>
+    <p class="impl-lede">Inspections by the LA County Department of Public Health's District Inspection Branch (DIB) dropped 82% over the same nine months of 2023 and 2025 while violations per inspection rose. The data does not explain why.</p>
+    <p class="impl-p">Even as DIB inspection volume collapsed, three laws expanded what the same division is legally required to enforce.</p>
+    <div class="impl-zone">
+      <div class="impl-zone-label">Three laws expanded DIB's mandate during this period</div>
+      <div class="impl-law-row">
+        <div class="impl-law-date">April 2024</div>
+        <div class="impl-law-text"><strong><a href="http://www.publichealth.lacounty.gov/eh/about/rental-housing-habitability-program.htm" target="_blank" rel="noopener">Rental Housing Habitability Program (RHHP) enacted</a></strong> by the LA County Board of Supervisors (Chapters 8.53 and 8.55 of County Code). New mandated inspection program for unincorporated areas. Took effect October 2024; first inspections November 2024.</div>
+      </div>
+      <div class="impl-law-row">
+        <div class="impl-law-date">September 2024</div>
+        <div class="impl-law-text"><strong><a href="https://leginfo.legislature.ca.gov/faces/billNavClient.xhtml?bill_id=202320240SB1465" target="_blank" rel="noopener">SB 1465 signed</a></strong> by Governor. Broadens the state definition of substandard housing, meaning more conditions now legally count as violations DIB must enforce.</div>
+      </div>
+      <div class="impl-law-row">
+        <div class="impl-law-date">January 2025</div>
+        <div class="impl-law-text"><strong><a href="https://leginfo.legislature.ca.gov/faces/billNavClient.xhtml?bill_id=202320240AB548" target="_blank" rel="noopener">AB 548 takes effect.</a></strong> Requires inspectors to examine additional units in a multifamily building when violations are found in one, adding more work per visit.</div>
+      </div>
+    </div>
+    <p class="impl-note">RHHP applies only to unincorporated areas, which were under 1% of the inspections analyzed here, so this decline is not explained by inspections shifting into RHHP.</p>
+    <p class="impl-note">DIB's own inspection guide describes annual routine inspection of five-or-more-unit buildings as program practice. No statute, ordinance, or contract requires any inspection frequency for incorporated cities, which is why practice could fall 82% with no rule broken.</p>
+    <p class="impl-synth">The decline did not slow what DIB is legally required to enforce. Three laws expanded the mandate while inspection volume fell 82%.</p>
+    <div class="impl-q-zone">
+      <div class="impl-q-zone-label">The question this raises</div>
+      <div class="impl-q-item">Does DIB have the capacity to meet its expanded responsibilities?</div>
+      <div class="impl-q-item">Can incorporated cities rely on housing inspections that follow no required schedule?</div>
+    </div>
+    <div class="impl-audience">
+      <div class="impl-audience-icon">i</div>
+      <div class="impl-audience-body">
+        <div class="impl-audience-label">Who should read this</div>
+        <div>The LA County Board of Supervisors, city councils, tenant advocacy organizations, and the public.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<div class="db-footer">
+  <p class="footer-source">Source: LA County Open Data Portal · Data accessed February 2026</p>
+  <p class="footer-note">Routine inspections only · Long Beach is absent from the source data · Pasadena, Vernon, and South Pasadena appear as published</p>
+</div>
+<div style="max-width:1200px;margin:0 auto;padding:0 40px 36px;">
+  <div style="border-top:0.5px solid #D8DCE3;padding-top:14px;display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px;">
+    <p style="font-size:12px;color:#6B7280;margin:0;"><strong style="color:#374151;font-weight:600;">Cindy Cruz</strong> &middot; 2026</p>
+    <p style="font-size:12px;margin:0;"><a href="https://www.linkedin.com/in/cindy-c-85b312114/" target="_blank" rel="noopener" style="color:#2E4A7A;text-decoration:none;border-bottom:1px solid #D8DCE3;">LinkedIn</a><span style="color:#9DA3AE;margin:0 8px;">&middot;</span><a href="https://github.com/ccruz92" target="_blank" rel="noopener" style="color:#2E4A7A;text-decoration:none;border-bottom:1px solid #D8DCE3;">GitHub</a></p>
+  </div>
+</div>
+
+
+<script>
+const NAVY = '#2E4A7A';
+const ORANGE = '#2E4A7A';
+
+new Chart(document.getElementById('lineChart').getContext('2d'), {
+  type: 'line',
+  data: {
+    labels: ['2023', '2024', '2025'],
+    datasets: [{ data: [34617, 8743, 4725], borderColor: NAVY, backgroundColor: 'rgba(46,74,122,0.06)', borderWidth: 3, pointBackgroundColor: NAVY, pointRadius: 7, pointHoverRadius: 9, tension: 0, fill: true }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ctx.parsed.y.toLocaleString() + ' inspections' } } },
+    scales: {
+      x: { ticks: { color: '#9DA3AE', font: { size: 13, family: 'IBM Plex Sans' } }, grid: { display: false }, border: { display: false } },
+      y: { ticks: { color: '#9DA3AE', font: { size: 12, family: 'IBM Plex Sans' }, callback: v => v >= 1000 ? Math.round(v/1000)+'K' : v }, grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: false } }
+    },
+    layout: { padding: { top: 32, bottom: 4, left: 24, right: 24 } }
+  },
+  plugins: [{
+    afterDatasetsDraw(chart) {
+      const ctx = chart.ctx;
+      const meta = chart.getDatasetMeta(0);
+      const vals = [34617, 8743, 4725];
+      meta.data.forEach((pt, i) => {
+        ctx.save();
+        ctx.font = '600 14px IBM Plex Sans, sans-serif';
+        ctx.fillStyle = NAVY;
+        ctx.textAlign = 'center';
+        ctx.fillText(vals[i].toLocaleString(), pt.x, pt.y - 16);
+        ctx.restore();
+      });
+    }
+  }]
+});
+</script>
+</body>
+</html>

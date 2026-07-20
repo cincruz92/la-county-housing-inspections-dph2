@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LA County Housing Inspections and Violations - Limitations</title>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@300;400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; outline: none !important; }
+  :root {
+    --navy: #2E4A7A; --navy-light: #EEF2F8; --orange: #E8873A;
+    --accent: #2E4A7A;
+    --accent-light: #EEF2F8;
+    --white: #FFFFFF; --gray-50: #F7F8FA; --gray-100: #F0F2F6; --gray-200: #EAECF0;
+    --gray-400: #9DA3AE; --gray-600: #6B7280; --gray-700: #374151; --gray-900: #111827;
+    --font-display: "Source Serif 4", serif; --font-body: "IBM Plex Sans", sans-serif;
+    --radius: 12px; --shadow: 0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.05);
+  }
+  html, body { font-family: var(--font-body);
+    font-size: 15px;
+    background: var(--gray-100); color: var(--gray-900); min-height: 100vh; }
+
+  .db-header { background: transparent; max-width: 1200px; margin: 0 auto; padding: 32px 40px 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .db-label { font-size: 11px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: #9DA3AE; margin-bottom: 6px; }
+  .db-title { font-family: var(--font-display); font-size: 26px; font-weight: 600; color: var(--navy); line-height: 1.25; }
+  .db-badge { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22); color: rgba(255,255,255,0.8); font-size: 12px; padding: 5px 14px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; pointer-events: none; user-select: none; }
+
+  .db-body { max-width: 1200px; margin: 0 auto; padding: 30px 40px 20px; }
+  .db-footer { max-width: 1200px; margin: 0 auto; padding: 16px 40px 40px; display: flex; justify-content: space-between; align-items: center; }
+  .footer-source { font-size: 11px; color: var(--gray-400); }
+  .footer-note { font-size: 11px; color: var(--gray-400); font-style: italic; }
+
+  .card { background: var(--white); border-radius: var(--radius); border: 1px solid var(--gray-200); padding: 26px 28px; box-shadow: var(--shadow); margin-bottom: 20px; }
+  .card-title { font-family: var(--font-display); font-size: 22px; font-weight: 600; color: var(--navy); margin-bottom: 6px; }
+  .card-sub { font-size: 13px; color: var(--gray-400); margin-bottom: 20px; }
+
+  .category-header { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--navy); margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1.5px solid var(--navy); }
+  .lim-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+  .lim-card { background: var(--gray-50); border-radius: var(--radius); padding: 14px 16px; display: flex; gap: 12px; border: 0.5px solid var(--gray-200); }
+  .lim-num { font-family: var(--font-display); font-size: 20px; font-weight: 600; color: var(--navy); opacity: 0.25; flex-shrink: 0; line-height: 1.1; min-width: 24px; }
+  .lim-content { flex: 1; }
+  .lim-title { font-size: 13px; font-weight: 500; color: var(--gray-900); margin-bottom: 5px; }
+  .lim-body { font-size: 12px; color: var(--gray-600); line-height: 1.6; }
+  .lim-body strong { color: var(--navy); font-weight: 600; }
+  .method-note { font-size: 12px; color: var(--gray-900); margin-top: 12px; line-height: 1.65; padding: 12px 16px; background: var(--white); border-left: 3px solid var(--navy); border-radius: 0 4px 4px 0; }
+  .method-note strong { color: var(--navy); font-weight: 600; }
+
+  .analyst-card { background: var(--navy-light); border-left: 4px solid var(--navy); border-radius: 0 var(--radius) var(--radius) 0; padding: 20px 24px; margin-bottom: 20px; }
+  .analyst-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gray-400); margin-bottom: 8px; }
+  .analyst-text { font-size: 14px; color: var(--gray-600); line-height: 1.7; }
+
+  /* style match: lookup-tool research-card treatment (hairline, no shadow) */
+  .card{box-shadow:0 1px 3px rgba(16,24,40,0.08), 0 1px 2px rgba(16,24,40,0.06);border:1px solid #D0D5DD;border-radius:4px;}
+  body{font-size:15px;}
+
+  /* ===== Mobile (added June 2026): no effect above 700px ===== */
+  @media (max-width: 700px) {
+    .db-header { padding: 24px 16px 0; }
+    .db-title { font-size: 21px; }
+    .db-body { padding: 22px 16px 16px; }
+    .lim-grid { grid-template-columns: 1fr; }
+    .db-footer { flex-direction: column; align-items: flex-start; gap: 6px; padding: 14px 16px 28px; }
+  }
+</style>
+</head>
+<body>
+<!-- PORTFOLIO NAVIGATION -->
+<div style="background:#1E3560;padding:12px 40px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+  <a href="index.html" style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);text-decoration:none;white-space:nowrap;letter-spacing:0.06em;text-transform:uppercase;display:flex;align-items:center;gap:6px;">&#8592; Portfolio Home</a>
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <a href="dashboard0.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Start Here</a>
+    <a href="dashboard1.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">The Decline</a>
+    <a href="dashboard2.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Violations by Area</a>
+    <a href="dashboard3.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Property Types</a>
+    <a href="dashboard6.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Look Up a Property</a>
+    <a href="dashboard4.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Equity</a>
+    <a href="methods.html" style="font-size:12px;color:rgba(255,255,255,0.75);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.2);transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">Methods</a>
+    <a href="dashboard5.html" style="font-size:12px;font-weight:600;color:#ffffff;background:rgba(255,255,255,0.22);text-decoration:none;white-space:nowrap;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.5);">Limitations</a>
+  </div>
+</div>
+
+
+<div class="db-header">
+  <div>
+    <p class="db-label">Limitations</p>
+    <h1 class="db-title">What This Analysis Cannot Tell You</h1>
+  </div>
+  
+</div>
+
+<div class="db-body">
+
+  <div class="card">
+    <h2 class="card-title">Data and Source Limitations</h2>
+    <p class="card-sub">How the data was collected, published, and made available by LA County.</p>
+
+    <div class="lim-grid">
+
+      <div class="lim-card">
+        <div class="lim-num">1</div>
+        <div class="lim-content">
+          <div class="lim-title">Data Availability and Replicability</div>
+          <div class="lim-body">The inspection and violation datasets were downloaded from the LA County Open Data Portal in February 2026. The county has since replaced both datasets with updated versions. <strong>The original versions are no longer publicly available on the portal</strong>, so the exact original files cannot be re-downloaded. A later extract of the same dataset was obtained and used to cross-check the findings over the overlapping period (see The Decline).</div>
+        </div>
+      </div>
+
+      <div class="lim-card">
+        <div class="lim-num">2</div>
+        <div class="lim-content">
+          <div class="lim-title">Analysis Window and Excluded Records</div>
+          <div class="lim-body">The raw inspections dataset covers January 1, 2023 through December 31, 2025 (48,458 inspections). This analysis is restricted to the January 1, 2023 through September 30, 2025 window, which excludes 373 inspections from October through December 2025. This window was selected to maintain a consistent multi-year analytical frame. The violations dataset has no dates of its own and is linked to inspections through SERIAL NUMBER. Of 62,631 raw violation records, 24,877 have no matching SERIAL NUMBER in the inspections file. Because the inspections file begins on January 1, 2023, these unmatched violations predate the inspections record and could not be analyzed. A further 728 violations are linked to the 373 inspections dated after September 30, 2025 and were excluded with them, which <strong>fully accounts for the 37,026 violations analyzed</strong> (62,631 minus 24,877 minus 728). Without an associated inspection record, these violations have no date, no property linkage, and no denominator for rate calculations. Their exclusion is a necessary outcome of how the two files connect, not a deliberate choice to leave them out. Both exclusions are documented in the data preparation log.</div>
+        </div>
+      </div>
+
+      <div class="lim-card">
+        <div class="lim-num">3</div>
+        <div class="lim-content">
+          <div class="lim-title">Property Type Scope</div>
+          <div class="lim-body">This analysis covers routine inspections of multi-family dwellings with five or more units, hotels, and SRO and residential hotel properties. Single family homes, duplexes, triplexes, and other small rental properties are not subject to routine DIB inspection and do not appear in this dataset. DIB does respond to complaint-based inspections at smaller properties, but those records are not included in this analysis. <strong>The excluded property types represent a significant portion of LA County's rental housing stock.</strong></div>
+        </div>
+      </div>
+
+      <div class="lim-card">
+        <div class="lim-num">4</div>
+        <div class="lim-content">
+          <div class="lim-title">Routine Inspections Only</div>
+          <div class="lim-body">This analysis covers only routine inspections. Although the source file is titled "Routine and Complaint Inspections," every record in the raw data is labeled as a routine inspection. No complaint inspections appear in the dataset. DIB does conduct complaint-based inspections in response to tenant reports of substandard conditions, and these may capture different properties, violation patterns, and timing dynamics than the routine program. <strong>Their absence from this dataset means complaint-driven enforcement activity is not visible in any of the trends shown.</strong></div>
+        </div>
+      </div>
+
+      <div class="lim-card">
+        <div class="lim-num">5</div>
+        <div class="lim-content">
+          <div class="lim-title">RHHP Inspections Excluded</div>
+          <div class="lim-body">The Rental Housing Habitability Program (RHHP) is a separate Environmental Health inspection program for unincorporated LA County areas. The law authorizing the program took effect October 23, 2024, and RHHP inspections began in November 2024. RHHP records are published as a separate dataset. In this dataset, the RHHP INSPECTION field is "NO" for every record, confirming that no RHHP activity is included. RHHP inspects each unit once every four years. DIB inspects apartment buildings annually and condominiums every two years. <strong>The two programs are not directly comparable.</strong></div>
+        </div>
+      </div>
+
+      <div class="lim-card">
+        <div class="lim-num">6</div>
+        <div class="lim-content">
+          <div class="lim-title">Geographic Coverage and City Classification</div>
+          <div class="lim-body">Pasadena, Long Beach, and Vernon run independent environmental health programs, confirmed directly from LA County DPH's own contact and district office pages. Long Beach has no records in the source data. <strong>Pasadena (28 records) and Vernon (1 record) appear in the source data and were retained in this analysis as published.</strong> South Pasadena (154 records) also appears in the source data, but no County source names South Pasadena as running its own environmental health department; its presence here is an unresolved anomaly, not a confirmed fourth excluded city.</div>
+          <div class="lim-body" style="margin-top:10px;">The source dataset's city field uses neighborhood names for many properties within the City of Los Angeles. A derived grouping field was created to consolidate 36 LA neighborhood entries, including North Hollywood, Van Nuys, Northridge, Studio City, Venice, and others, under "Los Angeles" for city-level analysis. This consolidation produced 27,686 unique inspections in the City of Los Angeles, representing 57.6% of all inspections.</div>
+          <div class="lim-body" style="margin-top:10px;">Northridge (495 records) was originally classified as a separate city in the source data and, in an earlier version of this analysis, was not consolidated under "Los Angeles." That choice was reversed in July 2026 and Northridge now appears as a child row within the City of Los Angeles grouping. A ZIP code can cross city lines, so counts keyed by city name (495) and by ZIP code (500, ZIPs 91324 and 91325) differ; this analysis keys by city name. The full note is on the Methods page.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <h2 class="card-title">Analytical Limitations</h2>
+    <p class="card-sub">What the data can and cannot explain about the findings.</p>
+
+    <div class="lim-grid">
+
+      <div class="lim-card">
+        <div class="lim-num">7</div>
+        <div class="lim-content">
+          <div class="lim-title">Glendale and Torrance Inspection Records</div>
+          <div class="lim-body">According to the LA County Department of Public Health, Glendale and Torrance have not adopted the County Health Code, so DIB has no enforcement authority over housing in those cities. <strong>The source dataset includes 2,856 routine housing inspections for Glendale (5.9% of the analysis window) and 545 for Torrance (1.1%).</strong> This inconsistency could not be resolved from the available data alone. The records are included as downloaded. Removing all 3,401 Glendale and Torrance records shifts the nine-month decline from 82.45% to 81.02%. <strong>The finding holds regardless of this inconsistency.</strong></div>
+        </div>
+      </div>
+
+      <div class="lim-card">
+        <div class="lim-num">8</div>
+        <div class="lim-content">
+          <div class="lim-title">ZIP Codes Excluded from Demographic Analysis</div>
+          <div class="lim-body"><strong>Of 289 inspection ZIP codes, 35 could not be included in the demographic analysis.</strong> The demographic analysis reflects 254 ZIP codes. ZIPs were excluded for one of three reasons.</div>
+          <div class="lim-body" style="margin-top:10px;">Twenty-four ZIPs had no Census ACS data available, typically because they correspond to institutional, commercial, or university areas with little or no residential population: 90111, 90205, 90214, 90306, 90332, 90510, 90607, 90702, 90709, 90714, 91065, 91077, 91187, 91305, 91701, 92104, 92107, 92626, 92627, 92648, 92658, 93436, 93557, 94704.</div>
+          <div class="lim-body" style="margin-top:10px;">Six ZIPs had Census records but with invalid income values (the Census Bureau's placeholder code for estimates it considers unreliable, typically due to very small sample sizes): 90071, 90639, 91046, 91608, 93243, 93563. Two of these, 93243 (Lebec) and 93563 (Valyermo), are legitimate but sparsely populated LA County communities whose estimates fall below the Census Bureau's reliability threshold.</div>
+          <div class="lim-body" style="margin-top:10px;">Five ZIPs had valid Census data but no inspections during the January-September 2023 baseline window, so a decline could not be computed for them: 90502, 91326 (Porter Ranch), 91384 (Castaic), 93543 (Littlerock), and 93544 (Llano). Two of these (90502 and 93543) have 2023 inspections only in October through December, outside the matched nine-month window. Together these five ZIPs account for 19 inspections, under 0.04% of the dataset.</div>
+        </div>
+      </div>
+
+      <div class="lim-card">
+        <div class="lim-num">9</div>
+        <div class="lim-content">
+          <div class="lim-title">Census Data Timing</div>
+          <div class="lim-body">Demographic data reflects ACS 5-year estimates covering 2020-2024. <strong>These estimates may not precisely reflect neighborhood conditions during the 2023-2025 inspection period</strong>, particularly in rapidly changing neighborhoods.</div>
+        </div>
+      </div>
+
+      <div class="lim-card">
+        <div class="lim-num">10</div>
+        <div class="lim-content">
+          <div class="lim-title">Scope of the Demographic Analysis Finding</div>
+          <div class="lim-body">R-squared values at or near zero mean there is no measurable link between a neighborhood's demographics and how much its inspections declined. This finding reflects patterns at the ZIP code level only. <strong>Disparities at finer scales, or involving variables not analyzed here, cannot be ruled out.</strong></div>
+        </div>
+      </div>
+
+      <div class="lim-card">
+        <div class="lim-num">11</div>
+        <div class="lim-content">
+          <div class="lim-title">No Resolution Tracking</div>
+          <div class="lim-body">This dataset documents violations found during inspections but does not track whether violations were corrected after citation. <strong>A high violation count does not necessarily indicate persistent noncompliance.</strong> It may reflect properties that were cited and quickly corrected.</div>
+        </div>
+      </div>
+
+      <div class="lim-card">
+        <div class="lim-num">12</div>
+        <div class="lim-content">
+          <div class="lim-title">Cause of Inspection Decline Unknown</div>
+          <div class="lim-body">The data documents an 82% decline in inspections over the same nine months of 2023 and 2025 <strong>but cannot explain why</strong>. Whether this reflects budget reductions, staffing changes, program restructuring, or other factors cannot be determined from the available data alone.</div>
+          <div class="method-note"><strong>Methodology note:</strong> This figure compares January through September 2023 (26,919 inspections) to January through September 2025 (4,725 inspections) to maintain a consistent nine-month window across both years.</div>
+        </div>
+      </div>
+
+      <div class="lim-card">
+        <div class="lim-num">13</div>
+        <div class="lim-content">
+          <div class="lim-title">Rising Violation Rate</div>
+          <div class="lim-body">The increase in violation rate from 32% to 42% could indicate deteriorating housing conditions or more targeted inspection practices. <strong>The data cannot distinguish between these explanations.</strong></div>
+        </div>
+      </div>
+
+      <div class="lim-card">
+        <div class="lim-num">14</div>
+        <div class="lim-content">
+          <div class="lim-title">Validation Coverage</div>
+          <div class="lim-body">An independent later extract reproduced the analysis exactly over April 2023 through September 2025 (see the validation on The Decline), but begins in April 2023. <strong>The first quarter of 2023, about 11,250 inspections and 42 percent of the baseline, therefore rests on the original download alone and could not be cross-checked.</strong> The decline period itself was reproduced in full.</div>
+        </div>
+      </div>
+
+      <div class="lim-card">
+        <div class="lim-num">15</div>
+        <div class="lim-content">
+          <div class="lim-title">Inspection Counts Are Not Property Counts</div>
+          <div class="lim-body">Each record is one inspection event, not one building. <strong>The 48,085 inspections in the analysis window occurred at 37,009 distinct facilities</strong>, so many properties were inspected more than once over the period.</div>
+        </div>
+      </div>
+
+      <div class="lim-card">
+        <div class="lim-num">16</div>
+        <div class="lim-content">
+          <div class="lim-title">Inactive Program Status, Unexplained</div>
+          <div class="lim-body"><strong>16.1% of inspection records are at facilities marked inactive in the County&rsquo;s program-status field.</strong> The field does not specify the reason, so this analysis does not interpret it.</div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="analyst-card">
+    <div class="analyst-label">About the Analyst</div>
+    <div class="analyst-text">This analysis was conducted by Cindy Cruz, who was born and raised in LA and has over five years of experience in quality assurance and compliance at a nonprofit homeless services organization serving Los Angeles County. Daily work involves auditing HMIS data, reviewing program documentation across CoC, ESG, and HUD-funded programs, and communicating compliance findings to program teams. For over a decade, she also helped manage rental property operations, handling rent invoicing, tax filings, and compliance with LAHD-related fees for a small residential property. As someone who has also taught and mentored students at Los Angeles City College, working across a range of learning needs, and who has engaged civically in shaping this city&rsquo;s future, the questions this data raises about public oversight and housing conditions in LA are both professional and personal.</div>
+  </div>
+
+</div>
+
+<div class="db-footer">
+  <p class="footer-source">Source: LA County Open Data Portal &middot; Census Reporter ACS 5-Year Estimates (2020-2024) &middot; Data accessed February 2026</p>
+  <p class="footer-note">Routine inspections only &middot; Long Beach is absent from the source data &middot; Pasadena, Vernon, and South Pasadena appear as published</p>
+</div>
+<div style="max-width:1200px;margin:0 auto;padding:0 40px 36px;">
+  <div style="border-top:0.5px solid #D8DCE3;padding-top:14px;display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px;">
+    <p style="font-size:12px;color:#6B7280;margin:0;"><strong style="color:#374151;font-weight:600;">Cindy Cruz</strong> &middot; 2026</p>
+    <p style="font-size:12px;margin:0;"><a href="https://www.linkedin.com/in/cindy-c-85b312114/" target="_blank" rel="noopener" style="color:#2E4A7A;text-decoration:none;border-bottom:1px solid #D8DCE3;">LinkedIn</a><span style="color:#9DA3AE;margin:0 8px;">&middot;</span><a href="https://github.com/ccruz92" target="_blank" rel="noopener" style="color:#2E4A7A;text-decoration:none;border-bottom:1px solid #D8DCE3;">GitHub</a></p>
+  </div>
+</div>
+
+
+</body>
+</html>
