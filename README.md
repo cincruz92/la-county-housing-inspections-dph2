@@ -2,7 +2,7 @@
 
 A case study on the collapse of routine housing inspections in Los Angeles County, 2023–2025. It analyzes 48,085 LA County Department of Public Health inspection records, asks who is affected and why, and tests whether the decline fell harder by income, housing cost, or race across ZIP codes.
 
-**Live site:** https://ccruz92.github.io/la-county-housing-inspections-dph2/ *(hosted on GitHub Pages)*
+**Live site:** https://cincruz92.github.io/la-county-housing-inspections-dph2/ *(hosted on GitHub Pages)*
 
 ## What this is
 
