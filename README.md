@@ -86,7 +86,7 @@ Raw files are kept exactly as downloaded. The `Excel/` folder holds PROJECT_SUMM
 I work in quality assurance and compliance at a nonprofit homeless services organization serving Los Angeles County and the San Fernando Valley. Day to day, I build the tracking systems that catch data errors before they affect funding and audit the records that decide who gets housed. Much of this work is the kind that only gets noticed when it is missing, the upstream checks that keep downstream decisions sound. That is why I noticed this analysis. I read housing data every day, and a drop this size is not a line on a chart to me, it is the system I work inside quietly stepping back. I built this to make that visible, and to be exact about what the data does and does not prove. The dataset construction, analysis, findings, and visualization design decisions are mine. The front-end code was written by Claude (Anthropic) to my direction. The R replication script was developed the same way, to my specification, and independently verified by rerunning it against the raw data before publishing.
 
 - LinkedIn: https://www.linkedin.com/in/cindy-c-85b312114/
-- GitHub: https://github.com/ccruz92
+- GitHub: https://github.com/cincruz92
 
 ## Data use and disclaimer
 
